@@ -61,14 +61,22 @@ button:disabled{box-shadow:none}button.ghost{background:var(--card);color:var(--
 .pill{border:2px solid var(--ink);background:#ffe066;color:#1d1b20;font-weight:700}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) button:not(.ghost){color:#1d1b20}}
 .gcard{display:block;width:100%;text-align:left;background:var(--card);color:var(--ink);border-left:12px solid var(--c);margin:0 0 14px;padding:14px 16px}
-.gcard b{display:block;font-size:20px}.ge{font-size:34px;float:right}
+.gcard{background:#2a2630!important;color:#fff!important}.gcard b{display:block;font-size:20px;color:#fff}.gcard .mute{color:#d6d0dc}
+main{padding-bottom:90px}
+#rwrap{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);z-index:6;display:none;gap:8px}
+#rwrap button{font-size:26px;padding:6px 10px;line-height:1}
+#rx{position:fixed;right:0;bottom:0;width:0;height:0;z-index:6;pointer-events:none}
+.fl{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);font-size:34px;animation:rise 3s ease-out forwards}
+.sw{display:block;animation:sway .9s ease-in-out infinite alternate}
+@keyframes rise{0%{transform:translateY(0);opacity:0}10%{opacity:1}100%{transform:translateY(-320px);opacity:0}}
+@keyframes sway{from{transform:translateX(-16px) rotate(-8deg)}to{transform:translateX(16px) rotate(8deg)}}.ge{font-size:34px;float:right}
 #mute{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:5;padding:5px 9px;background:var(--card);color:var(--ink)}
 .wave{display:grid;gap:14px}@media(min-width:760px){.wave{grid-template-columns:1fr 230px}.wave .side{order:2;position:sticky;top:12px;align-self:start}}
 .lb{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--line)}
 .sm{padding:6px 10px;font-size:14px;margin:0 6px 8px 0}
 </style>
 </head>
-<body><button id="mute" onclick="toggleMute()" aria-label="Toggle sound">🔊</button><main id="app"><p class="sub">Loading…</p></main>
+<body><button id="mute" onclick="toggleMute()" aria-label="Toggle sound">🔊</button><div id="rx"></div><div id="rwrap"><button class="ghost" onclick="sendReact('😂')" aria-label="Laugh">😂</button><button class="ghost" onclick="sendReact('🇹🇼')" aria-label="Taiwan flag">🇹🇼</button><button class="ghost" onclick="sendReact('🫃')" aria-label="Pregnant man">🫃</button></div><main id="app"><p class="sub">Loading…</p></main>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -99,7 +107,7 @@ const isHost=()=>S.room&&S.room.host===S.uid;
 const nameOf=id=>(S.players.find(p=>p.id===id)||{}).name||"Someone";
 
 function render(){
- if(S.db)maybeAdvance();
+ if(S.db){maybeAdvance();updReact()}
  const a=document.activeElement;if(S.drag){S.pending=true;return}
  if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.type!=="checkbox"){S.pending=true;return}
  S.pending=false;const el=$("#app");
@@ -176,6 +184,10 @@ function startGuess(){const clue=$("#wt").value.trim(),left=$("#wl").value.trim(
 function lockGuess(){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({wg:{round:S.room.round,v:Math.round(S.wg)}}))}
 function revealWave(){const r=S.room,pts={};let m=0;S.players.filter(p=>p.id!==r.maker).forEach(p=>{const d=p.wg&&p.wg.round===r.round?Math.abs(p.wg.v-r.target):999,n=d<=5?3:d<=12?2:d<=20?1:0;pts[p.id]=n;if(n)m++});pts[r.maker]=m*MAKER_PTS;
  const b=S.db.batch();b.update(S.db.doc("rooms/"+S.code),{phase:"reveal",pts});S.players.forEach(p=>{if(pts[p.id])b.update(S.db.doc(`rooms/${S.code}/players/${p.id}`),{score:firebase.firestore.FieldValue.increment(pts[p.id])})});return b.commit().catch(e=>{S.err="Could not reveal: "+e.message;render()})}
+function spawnReact(e){const el=document.createElement("span"),d=2.6+Math.random()*1.2,i=document.createElement("span");el.className="fl";el.style.right=(14+Math.random()*70)+"px";el.style.animationDuration=d+"s";i.className="sw";i.textContent=e;i.style.animationDuration=(.7+Math.random()*.6)+"s";el.appendChild(i);$("#rx").appendChild(el);setTimeout(()=>el.remove(),d*1000+100)}
+function sendReact(e){const t=Date.now();if(t-(S.rlast||0)<350||!S.code)return;S.rlast=t;const id=t+"-"+Math.random();S.rseen=S.rseen||{};S.rseen[S.uid]=id;spawnReact(e);S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({react:{e,id}}).catch(()=>{})}
+function checkReacts(){S.rseen=S.rseen||{};S.players.forEach(p=>{if(!p.react||S.rseen[p.id]===p.react.id)return;S.rseen[p.id]=p.react.id;if(S.rinit&&p.id!==S.uid)spawnReact(p.react.e)});S.rinit=true}
+function updReact(){$("#rwrap").style.display=S.code&&S.room&&S.room.phase&&S.room.phase!=="lobby"?"flex":"none"}
 function home(){return `<h1>Mongrel Games</h1><p class="sub">${S.game==="wave"?"Wavelength":"Guess the Impostor"} · <a class="lnk" onclick="S.page='games';render()">all games</a></p>
 <div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
@@ -216,9 +228,9 @@ function createRoom(){if(!needName())return;guard(async()=>{const code=Array.fro
  await S.db.doc("rooms/"+code).set({host:S.uid,phase:"lobby",round:0,created:Date.now(),game:S.game||"imp"});await enter(code)})}
 function joinRoom(c){if(!needName())return;c=(c||"").trim().toUpperCase();guard(async()=>{const s=await S.db.doc("rooms/"+c).get();if(!s.exists){S.err="No room with that code.";return}S.game=s.data().game||"imp";await enter(c)})}
 async function enter(code){await S.db.doc(`rooms/${code}/players/${S.uid}`).set({name:S.name,joined:Date.now()});ls.set("room",code);sub(code)}
-function sub(code){unsub();S.code=code;S.adv=null;S.claim=null;S.page="home";
+function sub(code){unsub();S.code=code;S.adv=null;S.claim=null;S.rseen={};S.rinit=false;S.page="home";
  S.unsubs.push(S.db.doc("rooms/"+code).onSnapshot(s=>{S.room=s.exists?s.data():null;if(S.room){const ph=S.room.phase;if(ph!==S.lastPhase){if(ph==="reveal"){const p=(S.room.pts||{})[S.uid]||0;p?chord(p>=3?[523,659,784,1047]:[523,659]):beep(190,.3,"sawtooth",.05)}if(ph==="result")chord([392,523,659])}S.lastPhase=ph}if(S.room&&S.room.phase==="play")S.show=S.show&&S.lastRound===S.room.round;S.lastRound=S.room&&S.room.round;render()},e=>{S.err="Connection problem.";render()}));
- S.unsubs.push(S.db.collection(`rooms/${code}/players`).onSnapshot(q=>{S.players=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.joined-b.joined);render()}))}
+ S.unsubs.push(S.db.collection(`rooms/${code}/players`).onSnapshot(q=>{S.players=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.joined-b.joined);checkReacts();render()}))}
 function unsub(){S.unsubs.forEach(f=>f());S.unsubs=[]}
 function startRound(){guard(async()=>{if(!S.sel)S.sel=new Set(cats().map(c=>c.name));const cs=cats().filter(c=>S.sel&&S.sel.has(c.name)&&c.words.length);if(!cs.length){S.err="Select a category with words.";return}
  const c=pick(cs),ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"play",guess:null,guessOk:null,round:(S.room.round||0)+1,category:c.name,word:pick(c.words),impostor:pick(ps).id,hr:1,order:shuffle(ps.map(p=>p.id))});S.show=false})}
