@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guess the Impostor</title>
+<style>
+:root{--bg:#f6f3ee;--card:#fff;--ink:#1d1b20;--mute:#6b6670;--acc:#d6336c;--acc2:#2b8a3e;--line:#e3ddd3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17151a;--card:#232027;--ink:#f1eef3;--mute:#a49eab;--acc:#ff6b9d;--acc2:#69db7c;--line:#38333f}}
+:root[data-theme="dark"]{--bg:#17151a;--card:#232027;--ink:#f1eef3;--mute:#a49eab;--acc:#ff6b9d;--acc2:#69db7c;--line:#38333f}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:520px;margin:0 auto;padding:18px 16px 40px}
+h1{font-size:26px;margin:6px 0 2px}h2{font-size:18px;margin:0 0 10px}
+.sub{color:var(--mute);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
+input,textarea,select{width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin:0 0 10px}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:11px 16px;background:var(--acc);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
+.code{font-size:34px;letter-spacing:.25em;font-weight:800;text-align:center;margin:4px 0}
+.pill{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--bg);border:1px solid var(--line);margin:3px 4px 3px 0;font-size:14px}
+.big{font-size:30px;font-weight:800;text-align:center;margin:10px 0}
+.imp{color:var(--acc)}.ok{color:var(--acc2)}
+.chk{display:flex;gap:8px;align-items:center;margin:4px 0}.chk input{width:auto;margin:0}
+.vote{display:flex;justify-content:space-between;width:100%;margin:0 0 8px}
+.err{color:var(--acc);margin:0 0 10px}.mute{color:var(--mute);font-size:14px}
+a.lnk{color:var(--mute);cursor:pointer;text-decoration:underline;font-size:14px}
+</style>
+</head>
+<body><main id="app"><p class="sub">Loading…</p></main>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// PASTE YOUR FIREBASE CONFIG HERE (Firebase console → Project settings → Your apps → Web app)
+const FIREBASE_CONFIG={
+apiKey: "AIzaSyDsKPs-QjS-uxRHNgGBHawe4IYG87D-DLs",
+authDomain: "mongrelgames-d07d7.firebaseapp.com",
+projectId: "mongrelgames-d07d7",
+appId: "1:773393221714:web:38297c704a5c610965b78b"
+};
+const BUILT=[
+["Animals","Lion,Penguin,Dolphin,Giraffe,Octopus,Kangaroo,Owl,Elephant,Fox,Turtle,Bat,Camel"],
+["Food","Pizza,Sushi,Tacos,Pancakes,Ice cream,Burger,Pierogi,Lasagna,Salad,Popcorn,Soup,Croissant"],
+["Countries","Poland,Japan,Brazil,Egypt,Canada,Italy,Australia,Norway,India,Mexico,Iceland,Greece"],
+["Jobs","Pilot,Teacher,Chef,Doctor,Firefighter,Plumber,Farmer,Programmer,Barber,Detective,Dentist,Astronaut"],
+["Places","Beach,Library,Airport,Hospital,Cinema,Zoo,Gym,Castle,Supermarket,Museum,Mountain,Casino"],
+["Things at home","Fridge,Sofa,Toaster,Mirror,Curtains,Vacuum,Bathtub,Candle,Remote,Pillow,Kettle,Ladder"]
+].map(([n,w])=>({name:n,words:w.split(",")}));
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const S={db:null,uid:null,name:"",code:null,room:null,players:[],custom:[],sel:null,show:false,page:"home",err:"",unsubs:[],pending:false};
+const ls={get(k){try{return localStorage.getItem(k)||""}catch(e){return""}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const hash=s=>"c"+[...s.toLowerCase().trim()].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7).toString(36);
+const cats=()=>{const m=new Map();BUILT.forEach(c=>m.set(c.name.toLowerCase(),{name:c.name,words:[...c.words]}));
+ S.custom.forEach(c=>{const k=(c.name||"").toLowerCase();if(!k)return;const e=m.get(k)||{name:c.name,words:[]};(c.words||[]).forEach(w=>{if(!e.words.some(x=>x.toLowerCase()===w.toLowerCase()))e.words.push(w)});m.set(k,e)});return[...m.values()]};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const isHost=()=>S.room&&S.room.host===S.uid;
+const nameOf=id=>(S.players.find(p=>p.id===id)||{}).name||"Someone";
+
+function render(){
+ const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.type!=="checkbox"){S.pending=true;return}
+ S.pending=false;const el=$("#app");
+ if(!S.db){el.innerHTML=`<h1>🕵️ Guess the Impostor</h1><p class="sub">Could not connect to Firebase. Check that your config is pasted in index.html, that Anonymous sign-in is enabled, and that Firestore is created.</p>`;return}
+ el.innerHTML=S.page==="manage"?manage():S.code&&S.room?game():home();
+}
+document.addEventListener("focusout",()=>setTimeout(()=>{if(S.pending)render()},50));
+
+function home(){return `<h1>🕵️ Guess the Impostor</h1><p class="sub">Private rooms for you and your friends.</p>
+<div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
+${S.err?`<p class="err">${esc(S.err)}</p>`:""}
+<div class="card"><h2>Create a room</h2><button style="width:100%" onclick="createRoom()">Create private room</button></div>
+<div class="card"><h2>Join a room</h2><input id="jc" maxlength="4" placeholder="Room code" style="text-transform:uppercase;letter-spacing:.2em"><button style="width:100%" onclick="joinRoom($('#jc').value)">Join</button></div>
+<button class="ghost" style="width:100%" onclick="S.page='manage';render()">Manage categories &amp; words</button>`}
+
+function manage(){const cs=cats();
+ return `<h1>Categories &amp; words</h1><p class="sub">Shared with everyone who uses this site.</p>
+<div class="card"><h2>New category</h2><input id="nc" placeholder="Category name"><textarea id="nw" rows="3" placeholder="Words, separated by commas"></textarea><button style="width:100%" onclick="saveCat($('#nc').value,$('#nw').value)">Save category</button></div>
+<div class="card"><h2>Add words to a category</h2><select id="ec">${cs.map(c=>`<option>${esc(c.name)}</option>`).join("")}</select><textarea id="ew" rows="2" placeholder="New words, separated by commas"></textarea><button style="width:100%" onclick="saveCat($('#ec').value,$('#ew').value)">Add words</button></div>
+${S.err?`<p class="err">${esc(S.err)}</p>`:""}
+${cs.map(c=>`<div class="card"><b>${esc(c.name)}</b> <span class="mute">(${c.words.length})</span><div>${c.words.map(w=>`<span class="pill">${esc(w)}</span>`).join("")}</div></div>`).join("")}
+<button class="ghost" style="width:100%" onclick="S.page='home';S.err='';render()">← Back</button>`}
+
+function game(){const r=S.room,h=isHost(),me=r.impostor===S.uid;let b="";
+ const head=`<div class="card"><div class="mute" style="text-align:center">Room code — share it with friends</div><div class="code">${esc(S.code)}</div><div>${S.players.map(p=>`<span class="pill">${p.id===r.host?"👑 ":""}${esc(p.name)}${p.id===S.uid?" (you)":""}</span>`).join("")}</div></div>`;
+ if(r.phase==="lobby"){const cs=cats();if(!S.sel)S.sel=new Set(cs.map(c=>c.name));
+  b=h?`<div class="card"><h2>Categories in play</h2>${cs.map(c=>`<label class="chk"><input type="checkbox" ${S.sel.has(c.name)?"checked":""} onchange="togCat(${JSON.stringify(c.name).replace(/"/g,"&quot;")},this.checked)"> ${esc(c.name)} <span class="mute">(${c.words.length})</span></label>`).join("")}<button style="width:100%;margin-top:10px" ${S.players.length<3||!S.sel.size?"disabled":""} onclick="startRound()">Start round</button>${S.players.length<3?`<p class="mute">Need at least 3 players.</p>`:""}</div>`:`<p class="sub" style="text-align:center">Waiting for the host to start…</p>`}
+ else if(r.phase==="play"){b=`<div class="card" style="text-align:center"><div class="mute">Round ${r.round} · Category</div><div class="big">${esc(r.category)}</div>
+  ${S.show?(me?`<div class="big imp">You are the IMPOSTOR</div><p class="mute">Blend in — you don’t know the word.</p>`:`<div class="mute">The secret word is</div><div class="big ok">${esc(r.word)}</div>`):""}
+  <button class="ghost" onclick="S.show=!S.show;render()">${S.show?"Hide my role":"Tap to see my role"}</button></div>
+  <p class="sub" style="text-align:center">${esc(nameOf(r.starter))} starts. Each player gives one hint, then discuss.</p>
+  ${h?`<button style="width:100%" onclick="setPhase('vote')">Start voting</button>`:""}`}
+ else if(r.phase==="vote"){const mine=(S.players.find(p=>p.id===S.uid)||{}).vote,voted=S.players.filter(p=>p.vote&&p.vote.round===r.round).length;
+  b=`<div class="card"><h2>Who is the impostor?</h2>${S.players.filter(p=>p.id!==S.uid).map(p=>`<button class="vote ${mine&&mine.round===r.round&&mine.target===p.id?"":"ghost"}" onclick="castVote('${p.id}')"><span>${esc(p.name)}</span><span>${mine&&mine.round===r.round&&mine.target===p.id?"✓":""}</span></button>`).join("")}<p class="mute">${voted}/${S.players.length} voted</p></div>${h?`<button style="width:100%" onclick="setPhase('result')">Show results</button>`:""}`}
+ else{const t={};S.players.forEach(p=>{if(p.vote&&p.vote.round===r.round)t[p.vote.target]=(t[p.vote.target]||0)+1});
+  const mx=Math.max(0,...Object.values(t)),top=Object.keys(t).filter(k=>t[k]===mx),caught=top.length===1&&top[0]===r.impostor;
+  b=`<div class="card" style="text-align:center"><div class="mute">The impostor was</div><div class="big imp">${esc(nameOf(r.impostor))}</div><div class="mute">The word was</div><div class="big">${esc(r.word)}</div><div class="big ${caught?"ok":"imp"}">${caught?"Impostor caught! 🎉":"Impostor got away 😈"}</div>
+  <div>${S.players.map(p=>`<span class="pill">${esc(p.name)}: ${t[p.id]||0} vote${(t[p.id]||0)===1?"":"s"}</span>`).join("")}</div></div>
+  ${h?`<div class="row"><button onclick="startRound()">Next round</button><button class="ghost" onclick="setPhase('lobby')">Back to lobby</button></div>`:""}`}
+ return `<h1>🕵️ Guess the Impostor</h1>${head}${S.err?`<p class="err">${esc(S.err)}</p>`:""}${b}<p style="text-align:center;margin-top:18px"><a class="lnk" onclick="leave()">Leave room</a>${h?"":` · <a class="lnk" onclick="takeHost()">Take over as host</a>`}</p>`}
+
+const guard=async f=>{try{S.err="";await f()}catch(e){S.err="Something went wrong: "+(e&&e.message||e.code||"try again");console.error(e)}render()};
+const needName=()=>{S.name=S.name.trim();if(!S.name){S.err="Please enter a nickname first.";render();return false}return true};
+function togCat(n,on){on?S.sel.add(n):S.sel.delete(n);render()}
+function createRoom(){if(!needName())return;guard(async()=>{const code=Array.from({length:4},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")).join("");
+ await S.db.doc("rooms/"+code).set({host:S.uid,phase:"lobby",round:0,created:Date.now()});await enter(code)})}
+function joinRoom(c){if(!needName())return;c=(c||"").trim().toUpperCase();guard(async()=>{const s=await S.db.doc("rooms/"+c).get();if(!s.exists){S.err="No room with that code.";return}await enter(c)})}
+async function enter(code){await S.db.doc(`rooms/${code}/players/${S.uid}`).set({name:S.name,joined:Date.now()});ls.set("room",code);sub(code)}
+function sub(code){unsub();S.code=code;S.page="home";
+ S.unsubs.push(S.db.doc("rooms/"+code).onSnapshot(s=>{S.room=s.exists?s.data():null;if(S.room&&S.room.phase==="play")S.show=S.show&&S.lastRound===S.room.round;S.lastRound=S.room&&S.room.round;render()},e=>{S.err="Connection problem.";render()}));
+ S.unsubs.push(S.db.collection(`rooms/${code}/players`).onSnapshot(q=>{S.players=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.joined-b.joined);render()}))}
+function unsub(){S.unsubs.forEach(f=>f());S.unsubs=[]}
+function startRound(){guard(async()=>{const cs=cats().filter(c=>S.sel&&S.sel.has(c.name)&&c.words.length);if(!cs.length){S.err="Select a category with words.";return}
+ const c=pick(cs),ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"play",round:(S.room.round||0)+1,category:c.name,word:pick(c.words),impostor:pick(ps).id,starter:pick(ps).id});S.show=false})}
+function setPhase(p){guard(()=>S.db.doc("rooms/"+S.code).update({phase:p}))}
+function castVote(t){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({vote:{round:S.room.round,target:t}}))}
+function takeHost(){guard(()=>S.db.doc("rooms/"+S.code).update({host:S.uid}))}
+function leave(){guard(async()=>{const c=S.code;unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");await S.db.doc(`rooms/${c}/players/${S.uid}`).delete()})}
+function saveCat(name,words){name=(name||"").trim();const ws=(words||"").split(/[,\n]/).map(w=>w.trim()).filter(Boolean);
+ if(!name||!ws.length){S.err="Enter a name and at least one word.";render();return}
+ guard(async()=>{const ref=S.db.collection("custom").doc(hash(name)),s=await ref.get(),old=s.exists?s.data().words||[]:[];
+  const all=[...old];ws.forEach(w=>{if(!all.some(x=>x.toLowerCase()===w.toLowerCase()))all.push(w)});await ref.set({name,words:all});S.page="manage"})}
+
+(async()=>{S.name=ls.get("nick");
+ try{firebase.initializeApp(FIREBASE_CONFIG);const cred=await firebase.auth().signInAnonymously();S.uid=cred.user.uid;S.db=firebase.firestore()}catch(e){console.error(e);S.db=null}
+ render();if(!S.db)return;
+ S.db.collection("custom").onSnapshot(q=>{S.custom=q.docs.map(d=>d.data());render()},()=>{});
+ const last=ls.get("room");if(last&&S.name){try{const s=await S.db.doc(`rooms/${last}/players/${S.uid}`).get();if(s.exists)sub(last)}catch(e){}}
+})();
+</script>
+</body>
+</html>
