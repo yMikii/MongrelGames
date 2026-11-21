@@ -60,18 +60,40 @@ const isHost=()=>S.room&&S.room.host===S.uid;
 const nameOf=id=>(S.players.find(p=>p.id===id)||{}).name||"Someone";
 
 function render(){
+ if(S.db)maybeAdvance();
  const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.type!=="checkbox"){S.pending=true;return}
  S.pending=false;const el=$("#app");
  if(!S.db){el.innerHTML=`<h1>Mongrel Games</h1><p class="sub">Could not connect to Firebase. Check that your config is pasted in index.html, that Anonymous sign-in is enabled, and that Firestore is created.</p>`;return}
  el.innerHTML=S.page==="manage"?manage():S.page==="games"?games():S.code&&S.room?game():home();
 }
-document.addEventListener("focusout",()=>setTimeout(()=>{if(S.pending)render()},50));
+document.addEventListener("focusout",e=>{if(e.relatedTarget&&e.relatedTarget.tagName==="BUTTON")return;setTimeout(()=>{if(S.pending)render()},250)});
 
 function games(){return `<h1>Mongrel Games</h1><p class="sub">Pick a game to play with your friends.</p><button class="vote ghost" onclick="S.page='home';render()"><span>🕵️ Guess the Impostor</span><span>Play →</span></button><p class="mute">More games coming soon.</p>`}
 const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 function guessBox(r){return r.impostor===S.uid&&r.guessOn?`<div class="card"><h2>Think you know the word?</h2><input id="gw" maxlength="40" placeholder="Guess the secret word"><button style="width:100%" onclick="guessWord($('#gw').value)">Submit guess</button><p class="mute">Right = you win. Wrong = the crew wins.</p></div>`:""}
 function setGuess(on){guard(()=>S.db.doc("rooms/"+S.code).update({guessOn:on}))}
 function guessWord(g){g=(g||"").trim();if(!g)return;guard(()=>S.db.doc("rooms/"+S.code).update({phase:"result",guess:g,guessOk:norm(g)===norm(S.room.word)}))}
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const hk=(r,k)=>"h_"+r.round+"_"+k;
+function hintsUI(r){
+ const hr=r.hr||1,P=id=>S.players.find(p=>p.id===id)||{},ord=(r.order||[]).filter(id=>S.players.some(p=>p.id===id));
+ let rows="";for(let k=1;k<=hr;k++){const hs=ord.filter(id=>P(id)[hk(r,k)]);if(hs.length)rows+=`<div class="mute" style="margin-top:8px">Hint round ${k}</div>`+hs.map(id=>`<div><b>${esc(P(id).name)}:</b> ${esc(P(id)[hk(r,k)])}</div>`).join("")}
+ const sp=ord.find(id=>!P(id)[hk(r,hr)]);let act="";
+ if(!ord.includes(S.uid))act=`<p class="mute">You joined mid-round — you’ll play in the next one.</p>`;
+ else if(sp)act=sp===S.uid?`<input id="hint" maxlength="60" placeholder="Your hint (not the word itself!)"><button style="width:100%" onclick="sendHint($('#hint').value)">Submit hint</button>`:`<p class="mute">⏳ ${esc(P(sp).name)} is writing a hint…</p>`;
+ else{const m=P(S.uid).choice,my=m&&m.round===r.round&&m.hr===hr?m.v:null,cnt=v=>ord.filter(id=>{const c=P(id).choice;return c&&c.round===r.round&&c.hr===hr&&c.v===v}).length;
+  act=`<p>Everyone has given a hint. What next?</p><button class="vote ${my==="vote"?"":"ghost"}" onclick="choose('vote')"><span>Vote now</span><span>${my==="vote"?"✓ ":""}${cnt("vote")}</span></button><button class="vote ${my==="more"?"":"ghost"}" onclick="choose('more')"><span>Another round of hints</span><span>${my==="more"?"✓ ":""}${cnt("more")}</span></button><p class="mute">Majority wins; a tie goes to voting.</p>`}
+ return `<div class="card"><h2>Hints</h2><div class="mute">Order: ${ord.map(id=>esc(P(id).name)).join(" → ")}</div>${rows}<div style="margin-top:12px">${act}</div></div>`}
+function sendHint(t){t=(t||"").trim();if(!t)return;guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({[hk(S.room,S.room.hr||1)]:t}))}
+function choose(v){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({choice:{round:S.room.round,hr:S.room.hr||1,v}}))}
+function maybeAdvance(){const r=S.room;if(!r||!S.players.length)return;
+ if(!S.players.some(p=>p.id===r.host)&&S.players[0].id===S.uid&&S.claim!==r.host){S.claim=r.host;S.db.doc("rooms/"+S.code).update({host:S.uid}).catch(()=>{})}
+ if(r.host!==S.uid||r.phase!=="play")return;
+ const hr=r.hr||1,ord=(r.order||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+ if(!ord.length||!ord.every(p=>p[hk(r,hr)]))return;
+ const ch=ord.map(p=>p.choice&&p.choice.round===r.round&&p.choice.hr===hr?p.choice.v:null);if(ch.includes(null))return;
+ const k=r.round+"-"+hr;if(S.adv===k)return;S.adv=k;const more=ch.filter(v=>v==="more").length;
+ S.db.doc("rooms/"+S.code).update(more>ch.length-more?{hr:hr+1,order:shuffle(ord.map(p=>p.id))}:{phase:"vote"}).catch(()=>{S.adv=null})}
 function home(){return `<h1>Mongrel Games</h1><p class="sub">Guess the Impostor · <a class="lnk" onclick="S.page='games';render()">all games</a></p>
 <div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
@@ -94,8 +116,7 @@ function game(){const r=S.room,h=isHost(),me=r.impostor===S.uid;let b="";
  else if(r.phase==="play"){b=`<div class="card" style="text-align:center"><div class="mute">Round ${r.round} · Category</div><div class="big">${esc(r.category)}</div>
   ${S.show?(me?`<div class="big imp">You are the IMPOSTOR</div><p class="mute">Blend in — you don’t know the word.</p>`:`<div class="mute">The secret word is</div><div class="big ok">${esc(r.word)}</div>`):""}
   <button class="ghost" onclick="S.show=!S.show;render()">${S.show?"Hide my role":"Tap to see my role"}</button></div>
-  ${guessBox(r)}<p class="sub" style="text-align:center">${esc(nameOf(r.starter))} starts. Each player gives one hint, then discuss.</p>
-  ${h?`<button style="width:100%" onclick="setPhase('vote')">Start voting</button>`:""}`}
+  ${guessBox(r)}${hintsUI(r)}`}
  else if(r.phase==="vote"){const mine=(S.players.find(p=>p.id===S.uid)||{}).vote,voted=S.players.filter(p=>p.vote&&p.vote.round===r.round).length;
   b=`<div class="card"><h2>Who is the impostor?</h2>${S.players.filter(p=>p.id!==S.uid).map(p=>`<button class="vote ${mine&&mine.round===r.round&&mine.target===p.id?"":"ghost"}" onclick="castVote('${p.id}')"><span>${esc(p.name)}</span><span>${mine&&mine.round===r.round&&mine.target===p.id?"✓":""}</span></button>`).join("")}<p class="mute">${voted}/${S.players.length} voted</p></div>${guessBox(r)}${h?`<button style="width:100%" onclick="setPhase('result')">Show results</button>`:""}`}
  else{const g=r.guess!=null,t={};S.players.forEach(p=>{if(p.vote&&p.vote.round===r.round)t[p.vote.target]=(t[p.vote.target]||0)+1});
@@ -103,7 +124,7 @@ function game(){const r=S.room,h=isHost(),me=r.impostor===S.uid;let b="";
   b=`<div class="card" style="text-align:center"><div class="mute">The impostor was</div><div class="big imp">${esc(nameOf(r.impostor))}</div><div class="mute">The word was</div><div class="big">${esc(r.word)}</div>${g?`<div class="mute">${esc(nameOf(r.impostor))} guessed “${esc(r.guess)}”</div><div class="big ${r.guessOk?"imp":"ok"}">${r.guessOk?"Correct — impostor wins! 😈":"Wrong — crew wins! 🎉"}</div>`:`<div class="big ${caught?"ok":"imp"}">${caught?"Impostor caught! 🎉":"Impostor got away 😈"}</div>`}
   <div>${S.players.map(p=>`<span class="pill">${esc(p.name)}: ${t[p.id]||0} vote${(t[p.id]||0)===1?"":"s"}</span>`).join("")}</div></div>
   ${h?`<div class="row"><button onclick="startRound()">Next round</button><button class="ghost" onclick="setPhase('lobby')">Back to lobby</button></div>`:""}`}
- return `<h1>Mongrel Games</h1><p class="sub">Guess the Impostor</p>${head}${S.err?`<p class="err">${esc(S.err)}</p>`:""}${b}<p style="text-align:center;margin-top:18px"><a class="lnk" onclick="leave()">Leave room</a>${h?"":` · <a class="lnk" onclick="takeHost()">Take over as host</a>`}</p>`}
+ return `<h1>Mongrel Games</h1><p class="sub">Guess the Impostor</p>${head}${S.err?`<p class="err">${esc(S.err)}</p>`:""}${b}<p style="text-align:center;margin-top:18px"><a class="lnk" onclick="leave()">Leave room</a></p>`}
 
 const guard=async f=>{try{S.err="";await f()}catch(e){S.err="Something went wrong: "+(e&&e.message||e.code||"try again");console.error(e)}render()};
 const needName=()=>{S.name=S.name.trim();if(!S.name){S.err="Please enter a nickname first.";render();return false}return true};
@@ -112,15 +133,14 @@ function createRoom(){if(!needName())return;guard(async()=>{const code=Array.fro
  await S.db.doc("rooms/"+code).set({host:S.uid,phase:"lobby",round:0,created:Date.now()});await enter(code)})}
 function joinRoom(c){if(!needName())return;c=(c||"").trim().toUpperCase();guard(async()=>{const s=await S.db.doc("rooms/"+c).get();if(!s.exists){S.err="No room with that code.";return}await enter(c)})}
 async function enter(code){await S.db.doc(`rooms/${code}/players/${S.uid}`).set({name:S.name,joined:Date.now()});ls.set("room",code);sub(code)}
-function sub(code){unsub();S.code=code;S.page="home";
+function sub(code){unsub();S.code=code;S.adv=null;S.claim=null;S.page="home";
  S.unsubs.push(S.db.doc("rooms/"+code).onSnapshot(s=>{S.room=s.exists?s.data():null;if(S.room&&S.room.phase==="play")S.show=S.show&&S.lastRound===S.room.round;S.lastRound=S.room&&S.room.round;render()},e=>{S.err="Connection problem.";render()}));
  S.unsubs.push(S.db.collection(`rooms/${code}/players`).onSnapshot(q=>{S.players=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.joined-b.joined);render()}))}
 function unsub(){S.unsubs.forEach(f=>f());S.unsubs=[]}
-function startRound(){guard(async()=>{const cs=cats().filter(c=>S.sel&&S.sel.has(c.name)&&c.words.length);if(!cs.length){S.err="Select a category with words.";return}
- const c=pick(cs),ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"play",guess:null,guessOk:null,round:(S.room.round||0)+1,category:c.name,word:pick(c.words),impostor:pick(ps).id,starter:pick(ps).id});S.show=false})}
+function startRound(){guard(async()=>{if(!S.sel)S.sel=new Set(cats().map(c=>c.name));const cs=cats().filter(c=>S.sel&&S.sel.has(c.name)&&c.words.length);if(!cs.length){S.err="Select a category with words.";return}
+ const c=pick(cs),ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"play",guess:null,guessOk:null,round:(S.room.round||0)+1,category:c.name,word:pick(c.words),impostor:pick(ps).id,hr:1,order:shuffle(ps.map(p=>p.id))});S.show=false})}
 function setPhase(p){guard(()=>S.db.doc("rooms/"+S.code).update({phase:p}))}
 function castVote(t){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({vote:{round:S.room.round,target:t}}))}
-function takeHost(){guard(()=>S.db.doc("rooms/"+S.code).update({host:S.uid}))}
 function leave(){guard(async()=>{const c=S.code;unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");await S.db.doc(`rooms/${c}/players/${S.uid}`).delete()})}
 function saveCat(name,words){name=(name||"").trim();const ws=(words||"").split(/[,\n]/).map(w=>w.trim()).filter(Boolean);
  if(!name||!ws.length){S.err="Enter a name and at least one word.";render();return}
