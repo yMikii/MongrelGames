@@ -108,11 +108,11 @@ const nameOf=id=>(S.players.find(p=>p.id===id)||{}).name||"Someone";
 
 function render(){
  if(S.db){maybeAdvance();updReact()}
- const a=document.activeElement;if(S.drag){S.pending=true;return}
+ let a=document.activeElement;if(a&&a.id==="hint"&&S.room){const m=S.players.find(p=>p.id===S.uid);if(m&&m[hk(S.room,S.room.hr||1)]){a.blur();a=null}}if(S.drag){S.pending=true;return}
  if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.type!=="checkbox"){S.pending=true;return}
  S.pending=false;const el=$("#app");
  if(!S.db){el.innerHTML=`<h1>Mongrel Games</h1><p class="sub">Could not connect to Firebase. Check that your config is pasted in index.html, that Anonymous sign-in is enabled, and that Firestore is created.</p>`;return}
- el.className=S.code&&S.room&&S.room.game==="wave"&&S.page!=="manage"?"wide":"";el.innerHTML=S.page==="manage"?manage():S.page==="games"?games():S.code&&S.room?game():home();
+ el.className=S.code&&S.room&&S.room.game==="wave"&&S.page!=="manage"?"wide":"";el.innerHTML=S.page==="manage"?manage():S.page==="games"?games():S.code&&S.room?game():home();paintTimers();
 }
 document.addEventListener("focusout",e=>{if(e.relatedTarget&&e.relatedTarget.tagName==="BUTTON")return;setTimeout(()=>{if(S.pending)render()},250)});
 
@@ -133,61 +133,26 @@ function hintsUI(r){
  else if(sp)act=sp===S.uid?`<input id="hint" maxlength="60" placeholder="Your hint (not the word itself!)"><button style="width:100%" onclick="sendHint($('#hint').value)">Submit hint</button>`:`<p class="mute">⏳ ${esc(P(sp).name)} is writing a hint…</p>`;
  else{const m=P(S.uid).choice,my=m&&m.round===r.round&&m.hr===hr?m.v:null,cnt=v=>ord.filter(id=>{const c=P(id).choice;return c&&c.round===r.round&&c.hr===hr&&c.v===v}).length;
   act=`<p>Everyone has given a hint. What next?</p><button class="vote ${my==="vote"?"":"ghost"}" onclick="choose('vote')"><span>Vote now</span><span>${my==="vote"?"✓ ":""}${cnt("vote")}</span></button><button class="vote ${my==="more"?"":"ghost"}" onclick="choose('more')"><span>Another round of hints</span><span>${my==="more"?"✓ ":""}${cnt("more")}</span></button><p class="mute">Majority wins; a tie goes to voting.</p>`}
- return `<div class="card"><h2>Hints</h2><div class="mute">Order: ${ord.map(id=>esc(P(id).name)).join(" → ")}</div>${rows}<div style="margin-top:12px">${act}</div></div>`}
-function sendHint(t){t=(t||"").trim();if(!t)return;guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({[hk(S.room,S.room.hr||1)]:t}))}
+ return `<div class="card"><h2>Hints <span class="mute" style="float:right">⏱ <b data-dl="${r.dl||0}"></b></span></h2><div class="mute">Order: ${ord.map(id=>esc(P(id).name)).join(" → ")}</div>${rows}<div style="margin-top:12px">${act}</div></div>`}
+function sendHint(t){t=(t||"").trim();if(!t)return;guard(async()=>{const r=S.room,hr=r.hr||1,ord=(r.order||[]).filter(id=>S.players.some(p=>p.id===id)),left=ord.some(id=>id!==S.uid&&!(S.players.find(p=>p.id===id)||{})[hk(r,hr)]),b=S.db.batch();b.update(S.db.doc(`rooms/${S.code}/players/${S.uid}`),{[hk(r,hr)]:t});b.update(S.db.doc("rooms/"+S.code),{dl:Date.now()+(left?30000:15000)});await b.commit()})}
 function choose(v){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({choice:{round:S.room.round,hr:S.room.hr||1,v}}))}
 function maybeAdvance(){const r=S.room;if(!r||!S.players.length)return;
  if(!S.players.some(p=>p.id===r.host)&&S.players[0].id===S.uid&&S.claim!==r.host){S.claim=r.host;S.db.doc("rooms/"+S.code).update({host:S.uid}).catch(()=>{})}
  if(r.host!==S.uid)return;
- if(r.game==="wave"){if(r.phase==="guess"){const g=S.players.filter(p=>p.id!==r.maker);if(g.length&&g.every(p=>p.wg&&p.wg.round===r.round)&&S.adv!=="w"+r.round){S.adv="w"+r.round;revealWave().catch(()=>{S.adv=null})}}return}
+ if(r.game==="wave"){if(r.phase==="guess"){const g=S.players.filter(p=>p.id!==r.maker);if(g.length&&(g.every(p=>p.wg&&p.wg.round===r.round)||(r.dl&&Date.now()>r.dl+2500))&&S.adv!=="w"+r.round+"-"+r.dl){S.adv="w"+r.round+"-"+r.dl;revealWave().catch(()=>{S.adv=null})}}return}
  if(r.phase!=="play")return;
  const hr=r.hr||1,ord=(r.order||[]).map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
- if(!ord.length||!ord.every(p=>p[hk(r,hr)]))return;
- const ch=ord.map(p=>p.choice&&p.choice.round===r.round&&p.choice.hr===hr?p.choice.v:null);if(ch.includes(null))return;
+ const now=Date.now(),sp=ord.find(p=>!p[hk(r,hr)]);
+ if(!ord.length)return;
+ if(sp){if(r.dl&&now>r.dl+1500){const k="s"+r.round+"-"+hr+"-"+sp.id;if(S.adv===k)return;S.adv=k;const left=ord.some(p=>p.id!==sp.id&&!p[hk(r,hr)]),b=S.db.batch();b.update(S.db.doc(`rooms/${S.code}/players/${sp.id}`),{[hk(r,hr)]:"⏰ (ran out of time)"});b.update(S.db.doc("rooms/"+S.code),{dl:now+(left?30000:15000)});b.commit().catch(()=>{S.adv=null})}return}
+ const ch=ord.map(p=>p.choice&&p.choice.round===r.round&&p.choice.hr===hr?p.choice.v:null);
+ if(ch.includes(null)&&!(r.dl&&now>r.dl+1000))return;
  const k=r.round+"-"+hr;if(S.adv===k)return;S.adv=k;const more=ch.filter(v=>v==="more").length;
- S.db.doc("rooms/"+S.code).update(more>ch.length-more?{hr:hr+1,order:shuffle(ord.map(p=>p.id))}:{phase:"vote"}).catch(()=>{S.adv=null})}
-
-let muted=ls.get("mute")==="1",AC;$("#mute").textContent=muted?"🔇":"🔊";
-function beep(f,d,t,v,w){if(muted)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain(),T=AC.currentTime+(w||0);o.type=t||"triangle";o.frequency.value=f;g.gain.setValueAtTime(v||.08,T);g.gain.exponentialRampToValueAtTime(.001,T+d);o.connect(g);g.connect(AC.destination);o.start(T);o.stop(T+d)}catch(e){}}
-const chord=a=>a.forEach((f,i)=>beep(f,.18,"triangle",.07,i*.09));
-document.addEventListener("click",e=>{if(e.target.closest("button"))beep(560,.07,"square",.04)},true);
-function toggleMute(){muted=!muted;ls.set("mute",muted?"1":"0");$("#mute").textContent=muted?"🔇":"🔊";if(!muted)chord([523,659])}
-const MAKER_PTS=1,rnd=()=>Math.round(8+Math.random()*84);
-const pt=(v,r)=>{const a=(180-v*1.8)*Math.PI/180;return[(150+r*Math.cos(a)).toFixed(1),(150-r*Math.sin(a)).toFixed(1)]};
-const wedge=(a,b,r)=>{const p=pt(Math.max(0,a),r),q=pt(Math.min(100,b),r);return`M150 150L${p}A${r} ${r} 0 0 1 ${q}Z`};
-function dial(o){const bands=o.target==null?"":[[20,"#ffd43b"],[12,"#ff922b"],[5,"#f03e3e"]].map(([d,c])=>`<path d="${wedge(o.target-d,o.target+d,128)}" style="fill:${c}"/>`).join("");
- const marks=(o.marks||[]).map(m=>{const[x,y]=pt(m.v,108);return`<circle cx="${x}" cy="${y}" r="11" style="fill:#1c7ed6;stroke:#fff;stroke-width:2"/><text x="${x}" y="${+y+4}" text-anchor="middle" font-size="11" font-weight="700" style="fill:#fff">${esc(m.n)}</text>`}).join("");
- const nd=o.needle==null?"":(([x,y])=>`<line id="nd" x1="150" y1="150" x2="${x}" y2="${y}" style="stroke:var(--ink);stroke-width:5;stroke-linecap:round"/>`)(pt(o.needle,120));
- return`<svg id="dial" viewBox="0 0 300 170" style="width:100%;max-width:460px;display:block;margin:0 auto;touch-action:none" ${o.drag?'onpointerdown="dragStart(event)" onpointermove="dragMove(event)" onpointerup="dragEnd(event)" onpointercancel="dragEnd(event)"':""}><path d="${wedge(0,100,128)}" style="fill:var(--card);stroke:var(--ink);stroke-width:3"/>${bands}${marks}${nd}<circle cx="150" cy="150" r="9" style="fill:var(--ink)"/></svg>`}
-function dragStart(e){S.drag=true;e.currentTarget.setPointerCapture(e.pointerId);dragMove(e)}
-function dragMove(e){if(!S.drag)return;const b=$("#dial").getBoundingClientRect(),x=(e.clientX-b.left)/b.width*300,y=(e.clientY-b.top)/b.height*170;let d=Math.atan2(150-y,x-150)*180/Math.PI;if(d<0)d=x<150?180:0;S.wg=Math.max(0,Math.min(100,(180-d)/1.8));const[nx,ny]=pt(S.wg,120),n=$("#nd");n.setAttribute("x2",nx);n.setAttribute("y2",ny)}
-function dragEnd(){S.drag=false;if(S.pending)render()}
-const sides=r=>`<div class="row" style="justify-content:space-between;flex-wrap:nowrap;margin:6px 0"><b>◀ ${esc(r.left)}</b><b style="text-align:right">${esc(r.right)} ▶</b></div>`;
-function board(){const r=S.room,L=[...S.players].sort((a,b)=>(b.score||0)-(a.score||0));return`<div class="card"><h2>🏆 Leaderboard</h2>${L.map((p,i)=>`<div class="lb"><span>${i+1}. ${r.phase!=="lobby"&&p.id===r.maker?"🔮 ":""}${esc(p.name)}${p.id===S.uid?" (you)":""}</span><b>${p.score||0}</b></div>`).join("")}</div>`}
-function waveGame(){const r=S.room,h=isHost(),P=id=>S.players.find(p=>p.id===id)||{},mk=r.maker===S.uid,ph=r.phase;let b="";
- if(S.wgRound!==r.round){S.wgRound=r.round;S.wg=50}
- const gs=S.players.filter(p=>p.id!==r.maker),lk=p=>p.wg&&p.wg.round===r.round,me=P(S.uid);
- if(ph==="lobby")b=h?`<div class="card"><p>Each round one player is the <b>maker</b>: they get a secret spot on a dial, a theme and two opposite sides. Everyone else drags the arrow to where they think it is.</p><button style="width:100%" ${S.players.length<2?"disabled":""} onclick="startWave()">Start game</button>${S.players.length<2?`<p class="mute">Need at least 2 players.</p>`:""}</div>`:`<p class="sub" style="text-align:center">Waiting for the host to start…</p>`;
- else if(ph==="setup")b=mk?`<div class="card"><h2>🔮 You’re the maker</h2><p class="mute">The red spot is the secret target. Pick a theme and two sides so your friends can find it.</p>${dial({target:r.target})}<input id="wt" maxlength="40" placeholder="Theme, e.g. Pineapple on pizza"><div>${[["Bad","Good"],["Underrated","Overrated"],["Cold","Hot"],["Boring","Exciting"],["Useless","Useful"]].map(([a,c])=>`<button class="ghost sm" onclick="fillSides('${a}','${c}')">${a} ↔ ${c}</button>`).join("")}</div><div class="row"><input id="wl" maxlength="20" placeholder="Left side"><input id="wr" maxlength="20" placeholder="Right side"></div><button style="width:100%" onclick="startGuess()">Start guessing</button></div>`:`<div class="card" style="text-align:center"><div class="big">🔮</div><p>${esc(P(r.maker).name)} is thinking up a theme…</p></div>`;
- else if(ph==="guess"){const mine=lk(me),v=mine?me.wg.v:S.wg;
-  b=`<div class="card" style="text-align:center"><div class="mute">Theme</div><div class="big" style="margin:4px 0">${esc(r.clue)}</div>${dial({target:mk?r.target:null,needle:mk?null:v,drag:!mk&&!mine})}${sides(r)}
-  ${mk?`<p class="mute">You’re the maker — wait for the guesses.</p>`:mine?`<p class="ok"><b>Locked in ✓</b></p>`:`<p class="mute">Drag the dial to move the arrow.</p><button style="width:100%" onclick="lockGuess()">Lock in guess</button>`}
-  <p class="mute">${gs.filter(lk).length}/${gs.length} locked in</p>${h?`<button class="ghost" onclick="revealWave()">Reveal now</button>`:""}</div>`}
- else{const pts=r.pts||{};b=`<div class="card" style="text-align:center"><div class="mute">Theme</div><div class="big" style="margin:4px 0">${esc(r.clue)}</div>${dial({target:r.target,marks:gs.filter(lk).map(p=>({v:p.wg.v,n:p.name[0].toUpperCase()}))})}${sides(r)}
-  <div style="text-align:left;margin-top:8px">${gs.map(p=>`<div class="lb"><span>${esc(p.name)}</span><b>${lk(p)?"+"+(pts[p.id]||0):"no guess"}</b></div>`).join("")}<div class="lb"><span>🔮 ${esc(P(r.maker).name)} (maker)</span><b>+${pts[r.maker]||0}</b></div></div>
-  <p class="mute">Red = 3, orange = 2, yellow = 1. The maker earns ${MAKER_PTS} point per guesser who scores.</p>${h?`<div class="row"><button onclick="nextWave()">Next round</button><button class="ghost" onclick="setPhase('lobby')">End game</button></div>`:""}</div>`}
- return`<h1>Mongrel Games</h1><p class="sub">Wavelength${ph!=="lobby"?" · Round "+r.round:""}</p><div class="wave"><div><div class="card" style="text-align:center"><span class="mute">Room code — share it with friends</span><div class="code">${esc(S.code)}</div></div>${S.err?`<p class="err">${esc(S.err)}</p>`:""}${b}<p style="text-align:center;margin-top:18px"><a class="lnk" onclick="leave()">Leave room</a>${h&&ph!=="lobby"&&ph!=="reveal"?` · <a class="lnk" onclick="nextWave()">Skip to next round</a>`:""}</p></div><div class="side">${board()}</div></div>`}
-function fillSides(a,c){$("#wl").value=a;$("#wr").value=c}
-function startWave(){guard(async()=>{const ps=S.players,b=S.db.batch();ps.forEach(p=>b.update(S.db.doc(`rooms/${S.code}/players/${p.id}`),{score:0,wg:null}));b.update(S.db.doc("rooms/"+S.code),{phase:"setup",round:1,maker:ps[0].id,target:rnd(),left:null,right:null,clue:null,pts:null});await b.commit()})}
-function nextWave(){guard(async()=>{const n=S.room.round+1,ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"setup",round:n,maker:ps[(n-1)%ps.length].id,target:rnd(),left:null,right:null,clue:null,pts:null})})}
-function startGuess(){const clue=$("#wt").value.trim(),left=$("#wl").value.trim(),right=$("#wr").value.trim();if(!clue||!left||!right){S.err="Fill in the theme and both sides.";render();return}guard(()=>S.db.doc("rooms/"+S.code).update({phase:"guess",clue,left,right}))}
-function lockGuess(){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({wg:{round:S.room.round,v:Math.round(S.wg)}}))}
-function revealWave(){const r=S.room,pts={};let m=0;S.players.filter(p=>p.id!==r.maker).forEach(p=>{const d=p.wg&&p.wg.round===r.round?Math.abs(p.wg.v-r.target):999,n=d<=5?3:d<=12?2:d<=20?1:0;pts[p.id]=n;if(n)m++});pts[r.maker]=m*MAKER_PTS;
- const b=S.db.batch();b.update(S.db.doc("rooms/"+S.code),{phase:"reveal",pts});S.players.forEach(p=>{if(pts[p.id])b.update(S.db.doc(`rooms/${S.code}/players/${p.id}`),{score:firebase.firestore.FieldValue.increment(pts[p.id])})});return b.commit().catch(e=>{S.err="Could not reveal: "+e.message;render()})}
-function spawnReact(e){const el=document.createElement("span"),d=2.6+Math.random()*1.2,i=document.createElement("span");el.className="fl";el.style.right=(14+Math.random()*70)+"px";el.style.animationDuration=d+"s";i.className="sw";i.textContent=e;i.style.animationDuration=(.7+Math.random()*.6)+"s";el.appendChild(i);$("#rx").appendChild(el);setTimeout(()=>el.remove(),d*1000+100)}
-function sendReact(e){const t=Date.now();if(t-(S.rlast||0)<350||!S.code)return;S.rlast=t;const id=t+"-"+Math.random();S.rseen=S.rseen||{};S.rseen[S.uid]=id;spawnReact(e);S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({react:{e,id}}).catch(()=>{})}
-function checkReacts(){S.rseen=S.rseen||{};S.players.forEach(p=>{if(!p.react||S.rseen[p.id]===p.react.id)return;S.rseen[p.id]=p.react.id;if(S.rinit&&p.id!==S.uid)spawnReact(p.react.e)});S.rinit=true}
-function updReact(){$("#rwrap").style.display=S.code&&S.room&&S.room.phase&&S.room.phase!=="lobby"?"flex":"none"}
+ S.db.doc("rooms/"+S.code).update(more>ch.length-more?{hr:hr+1,order:shuffle(ord.map(p=>p.id)),dl:now+30000}:{phase:"vote",dl:null}).catch(()=>{S.adv=null})}
+function paintTimers(){const now=Date.now();document.querySelectorAll("[data-dl]").forEach(el=>{const d=+el.dataset.dl;if(!d)return;const t=Math.max(0,Math.ceil((d-now)/1000));el.textContent=t+"s";el.style.color=t<=5?"var(--acc)":""})}
+function tick(){paintTimers();const r=S.room;if(!S.db||!r)return;maybeAdvance();
+ if(r.game==="wave"&&r.phase==="guess"&&r.dl&&Date.now()>r.dl&&r.maker!==S.uid){const m=S.players.find(p=>p.id===S.uid);if(m&&!(m.wg&&m.wg.round===r.round)&&S.alock!==r.dl){S.alock=r.dl;lockGuess()}}}
+setInterval(tick,500);
 function home(){return `<h1>Mongrel Games</h1><p class="sub">${S.game==="wave"?"Wavelength":"Guess the Impostor"} · <a class="lnk" onclick="S.page='games';render()">all games</a></p>
 <div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
@@ -233,7 +198,7 @@ function sub(code){unsub();S.code=code;S.adv=null;S.claim=null;S.rseen={};S.rini
  S.unsubs.push(S.db.collection(`rooms/${code}/players`).onSnapshot(q=>{S.players=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.joined-b.joined);checkReacts();render()}))}
 function unsub(){S.unsubs.forEach(f=>f());S.unsubs=[]}
 function startRound(){guard(async()=>{if(!S.sel)S.sel=new Set(cats().map(c=>c.name));const cs=cats().filter(c=>S.sel&&S.sel.has(c.name)&&c.words.length);if(!cs.length){S.err="Select a category with words.";return}
- const c=pick(cs),ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"play",guess:null,guessOk:null,round:(S.room.round||0)+1,category:c.name,word:pick(c.words),impostor:pick(ps).id,hr:1,order:shuffle(ps.map(p=>p.id))});S.show=false})}
+ const c=pick(cs),ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"play",guess:null,guessOk:null,round:(S.room.round||0)+1,category:c.name,word:pick(c.words),impostor:pick(ps).id,hr:1,order:shuffle(ps.map(p=>p.id)),dl:Date.now()+30000});S.show=false})}
 function setPhase(p){guard(()=>S.db.doc("rooms/"+S.code).update({phase:p}))}
 function castVote(t){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({vote:{round:S.room.round,target:t}}))}
 function leave(){guard(async()=>{const c=S.code;unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");await S.db.doc(`rooms/${c}/players/${S.uid}`).delete()})}
