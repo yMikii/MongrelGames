@@ -75,6 +75,16 @@ main{padding-bottom:90px}
 .lb{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--line)}
 .sm{padding:6px 10px;font-size:14px;margin:0 6px 8px 0}
 </style>
+<style>
+#shot{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:env(safe-area-inset-top,0px) 8px env(safe-area-inset-bottom,0px);overflow:hidden}
+#sh-top{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);left:0;right:0;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.sc{border:2px solid var(--ink);border-radius:12px;padding:4px 12px;background:var(--card);box-shadow:3px 3px 0 var(--ink);display:flex;gap:8px;align-items:center;font-weight:800}
+.sc i{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--ink)}.sc b{font-size:22px}
+#sh-box{position:relative;width:min(94vw,calc(100vh - 190px));aspect-ratio:1;border:3px solid var(--ink);border-radius:12px;overflow:hidden;box-shadow:6px 6px 0 var(--ink);background:#2a2630}
+#sh-box canvas{width:100%;height:100%;display:block;touch-action:none}
+#sh-ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;color:#fff;text-align:center;padding:10px}
+#sh-ov>*{pointer-events:auto}.ucard{display:block;width:min(270px,85%);text-align:left;background:#fff;color:#1d1b20}
+</style>
 </head>
 <body><button id="mute" onclick="toggleMute()" aria-label="Toggle sound">🔊</button><div id="rx"></div><div id="rwrap"><button class="ghost" onclick="sendReact('😂')" aria-label="Laugh">😂</button><button class="ghost" onclick="sendReact('🇹🇼')" aria-label="Taiwan flag">🇹🇼</button><button class="ghost" onclick="sendReact('🫃')" aria-label="Pregnant man">🫃</button></div><main id="app"><p class="sub">Loading…</p></main>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -113,7 +123,7 @@ function render(){
  const fid=a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="checkbox"?a.id:"",cs=fid?a.selectionStart:0;
  S.pending=false;const el=$("#app");
  if(!S.db){el.innerHTML=`<h1>Mongrel Games</h1><p class="sub">Could not connect to Firebase. Check that your config is pasted in index.html, that Anonymous sign-in is enabled, and that Firestore is created.</p>`;return}
- el.className=S.code&&S.room&&["wave","hang","scat"].includes(S.room.game)&&S.page!=="manage"?"wide":"";el.innerHTML=S.page==="manage"?(S.admin?manage():login()):S.page==="login"?login():S.page==="invite"?invite():S.page==="games"?games():S.code&&S.room?game():home();paintTimers();restoreDrafts(fid,cs);
+ el.className=S.code&&S.room&&["wave","hang","scat","shot"].includes(S.room.game)&&S.page!=="manage"?"wide":"";el.innerHTML=S.page==="manage"?(S.admin?manage():login()):S.page==="login"?login():S.page==="invite"?invite():S.page==="games"?games():S.code&&S.room?game():home();paintTimers();restoreDrafts(fid,cs);
 }
 document.addEventListener("focusout",e=>{if(e.relatedTarget&&e.relatedTarget.tagName==="BUTTON")return;setTimeout(()=>{if(S.pending)render()},250)});
 
@@ -124,7 +134,7 @@ function games(){return `<h1>Mongrel Games</h1><p class="sub">Join a friend’s 
 <button class="gcard" style="--c:#d6336c" onclick="S.game='imp';S.page='home';S.err='';render()"><span class="ge">🕵️</span><b>Guess the Impostor</b><span class="mute">One player doesn’t know the word. Hint, bluff, vote.</span></button>
 <button class="gcard" style="--c:#1c7ed6" onclick="S.game='wave';S.page='home';S.err='';render()"><span class="ge">🎯</span><b>Wavelength</b><span class="mute">Read your friend’s mind on a dial. Score up to 3 points.</span></button>
 <button class="gcard" style="--c:#f08c00" onclick="S.game='hang';S.page='home';S.err='';render()"><span class="ge">🍔</span><b>Burger Hangman</b><span class="mute">Guess the word before the burger is built.</span></button>
-<button class="gcard" style="--c:#2f9e44" onclick="S.game='scat';S.page='home';S.err='';render()"><span class="ge">🚌</span><b>Scattergories</b><span class="mute">Stop the bus! Fast answers, one random letter.</span></button><p class="mute">More games coming soon.</p>`}
+<button class="gcard" style="--c:#2f9e44" onclick="S.game='scat';S.page='home';S.err='';render()"><span class="ge">🚌</span><b>Scattergories</b><span class="mute">Stop the bus! Fast answers, one random letter.</span></button><button class="gcard" style="--c:#7048e8" onclick="S.game='shot';S.page='home';S.err='';render()"><span class="ge">🔫</span><b>Mongrel Shot</b><span class="mute">Top-down blob shooter. Pick upgrades, win 5 rounds.</span></button><p class="mute">More games coming soon.</p>`}
 const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 function guessBox(r){return r.impostor===S.uid&&r.guessOn?`<div class="card"><h2>Think you know the word?</h2><input id="gw" maxlength="40" placeholder="Guess the secret word"><button style="width:100%" onclick="guessWord($('#gw').value)">Submit guess</button><p class="mute">Right = you win. Wrong = the crew wins.</p></div>`:""}
 function setGuess(on){guard(()=>S.db.doc("rooms/"+S.code).update({guessOn:on}))}
@@ -146,6 +156,7 @@ function maybeAdvance(){const r=S.room;if(!r||!S.players.length)return;
  if(!S.players.some(p=>p.id===r.host)&&S.players[0].id===S.uid&&S.claim!==r.host){S.claim=r.host;S.db.doc("rooms/"+S.code).update({host:S.uid}).catch(()=>{})}
  if(r.host!==S.uid)return;
  if(r.game==="wave"){if((r.phase==="setup"||r.phase==="clue")&&r.dl&&Date.now()>r.dl+1500){const k="x"+r.round+"-"+r.dl;if(S.adv!==k){S.adv=k;nextWave()}}if(r.phase==="guess"){const g=S.players.filter(p=>p.id!==r.maker);if(g.length&&(g.every(p=>p.wg&&p.wg.round===r.round)||(r.dl&&Date.now()>r.dl+2500))&&S.adv!=="w"+r.round+"-"+r.dl){S.adv="w"+r.round+"-"+r.dl;revealWave().catch(()=>{S.adv=null})}}return}
+ if(r.game==="shot")return;
  if(r.game==="hang"){if(r.phase==="guess"&&r.dl&&Date.now()>r.dl+1500){const k="h"+r.round+"-"+r.dl;if(S.adv!==k){S.adv=k;hangStep(null).catch(()=>{S.adv=null})}}return}
  if(r.game==="scat"){if(r.phase==="play"){const ci=r.ci||0;if(S.players.every(p=>p[sk(r,ci)])||(r.dl&&Date.now()>r.dl+1500)){const k="c"+r.round+"-"+ci;if(S.adv!==k){S.adv=k;scatNext().catch(()=>{S.adv=null})}}}return}
  if(r.phase==="vote"){if(r.dl&&Date.now()>r.dl+1000){const k="v"+r.round;if(S.adv!==k){S.adv=k;S.db.doc("rooms/"+S.code).update({phase:"result",dl:null}).catch(()=>{S.adv=null})}}return}
@@ -175,7 +186,7 @@ function dragStart(e){S.drag=true;e.currentTarget.setPointerCapture(e.pointerId)
 function dragMove(e){if(!S.drag)return;const b=$("#dial").getBoundingClientRect(),x=(e.clientX-b.left)/b.width*300,y=(e.clientY-b.top)/b.height*170;let d=Math.atan2(150-y,x-150)*180/Math.PI;if(d<0)d=x<150?180:0;S.wg=Math.max(0,Math.min(100,(180-d)/1.8));const[nx,ny]=pt(S.wg,120),n=$("#nd");n.setAttribute("x2",nx);n.setAttribute("y2",ny)}
 function dragEnd(){S.drag=false;if(S.pending)render()}
 const sides=r=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:460px;margin:6px auto;text-align:center"><b>◀ ${esc(r.left)}</b><b>${esc(r.right)} ▶</b></div>`
-function board(){const r=S.room,L=[...S.players].sort((a,b)=>(b.score||0)-(a.score||0));return`<div class="card"><h2>🏆 Leaderboard</h2>${L.map((p,i)=>`<div class="lb"><span>${i+1}. ${r.phase!=="lobby"&&p.id===r.maker?"🔮 ":""}${esc(p.name)}${p.id===S.uid?" (you)":""}</span><b>${p.score||0}</b></div>`).join("")}</div>`}
+function board(){const r=S.room,L=[...S.players].sort((a,b)=>(b.score||0)-(a.score||0));return`<div class="card"><h2>🏆 Leaderboard</h2>${L.map((p,i)=>`<div class="lb"><span>${i+1}. ${r.phase!=="lobby"&&p.id===r.maker?"🔮 ":""}${esc(p.name)}${p.id===S.uid?" (you)":""}${kickLnk(p.id)}</span><b>${p.score||0}</b></div>`).join("")}</div>`}
 function waveGame(){const r=S.room,h=isHost(),P=id=>S.players.find(p=>p.id===id)||{},mk=r.maker===S.uid,ph=r.phase;let b="";
  if(S.wgRound!==r.round){S.wgRound=r.round;S.wg=50}
  const gs=S.players.filter(p=>p.id!==r.maker),lk=p=>p.wg&&p.wg.round===r.round,me=P(S.uid);
@@ -206,7 +217,7 @@ function paintTimers(){const now=Date.now();document.querySelectorAll("[data-dl]
 function tick(){paintTimers();const r=S.room;if(!S.db||!r)return;maybeAdvance();
  if(r.game==="wave"&&r.phase==="guess"&&r.dl&&Date.now()>r.dl&&r.maker!==S.uid){const m=S.players.find(p=>p.id===S.uid);if(m&&!(m.wg&&m.wg.round===r.round)&&S.alock!==r.dl){S.alock=r.dl;lockGuess()}}}
 setInterval(tick,500);
-const GN={imp:"Guess the Impostor",wave:"Wavelength",hang:"Burger Hangman",scat:"Scattergories"};
+const GN={imp:"Guess the Impostor",wave:"Wavelength",hang:"Burger Hangman",scat:"Scattergories",shot:"Mongrel Shot"};
 const rn=r=>r.round-(r.r0||0),last=r=>rn(r)>=(r.rounds||5);
 const winners=()=>{const m=Math.max(0,...S.players.map(p=>p.score||0)),w=S.players.filter(p=>(p.score||0)===m);return w.map(p=>esc(p.name)).join(" & ")+(w.length>1?" win!":" wins!")};
 const roundsSel=r=>`<label class="chk" style="gap:10px;margin-top:10px">Rounds <select style="width:auto;margin:0" onchange="setRounds(this.value)">${[1,2,3,5,8,10].map(n=>`<option ${n===(r.rounds||5)?"selected":""}>${n}</option>`).join("")}</select></label>`;
@@ -263,6 +274,115 @@ function copyLink(b){const u=location.href.split("?")[0].split("#")[0]+"?room="+
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(u).then(ok,fb);else fb()}
 function invite(){return `<h1>Mongrel Games</h1><p class="sub">You’ve been invited to join room <b>${esc(S.inv)}</b>.</p><div class="card"><h2>Pick a nickname</h2><input id="inick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}"><button style="width:100%" onclick="acceptInvite()">Join room</button></div>${S.err?`<p class="err">${esc(S.err)}</p>`:""}<a class="lnk" onclick="S.page='games';S.err='';render()">Skip to the main page</a>`}
 function acceptInvite(){const n=($("#inick").value||"").trim();if(!n){S.err="Please enter a nickname first.";render();return}S.name=n;ls.set("nick",n);S.err="";joinRoom(S.inv)}
+/* ===== Kick ===== */
+const kickLnk=id=>S.room&&S.room.phase==="lobby"&&isHost()&&id!==S.uid?` <a class="lnk" title="Kick" style="cursor:pointer" onclick="kick('${id}')">✕</a>`:"";
+function kick(id){const p=S.players.find(x=>x.id===id);if(!p||!confirm(`Kick ${p.name} from the lobby?`))return;guard(async()=>{await S.db.doc("rooms/"+S.code).update({kicked:firebase.firestore.FieldValue.arrayUnion(id)});await S.db.doc(`rooms/${S.code}/players/${id}`).delete()})}
+function kickCheck(){const r=S.room;if(r&&S.code&&(r.kicked||[]).includes(S.uid)){shotStop();unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");S.page="games";S.err="You were removed from the room by the host.";render()}}
+/* ===== Mongrel Shot ===== */
+const SMODES={"1v1":{n:2,teams:2},"2v2":{n:4,teams:2},"1v1v1":{n:3,teams:3}};
+const SPAWNS={"1v1":[[70,300],[530,300]],"2v2":[[70,190],[70,410],[530,190],[530,410]],"1v1v1":[[70,300],[530,130],[530,470]]};
+const SMAPS=[{n:"Pillars",w:[[200,120,40,40],[360,120,40,40],[200,440,40,40],[360,440,40,40],[270,270,60,60]]},{n:"Cross",w:[[285,150,30,300],[180,285,240,30],[160,100,80,20],[360,480,80,20]]},{n:"Corridors",w:[[150,130,200,24],[250,230,200,24],[150,346,200,24],[250,446,200,24]]}];
+const COLORS=["#ff6b6b","#4dabf7","#51cf66","#ffd43b","#cc5de8","#ff922b","#20c997","#f783ac"];
+const UPS=[{k:"tank",n:"Tank",d:"+50 health, but a bigger blob",f:s=>{s.hp+=50;s.r*=1.25}},{k:"glass",n:"Glass cannon",d:"1 less bullet, +70% damage",f:s=>{s.ammo=Math.max(1,s.ammo-1);s.dmg*=1.7}},{k:"rico",n:"Ricochet",d:"Bullets bounce off walls twice",f:s=>{s.bn+=2}},{k:"pois",n:"Poison",d:"Bullets poison for 3 seconds",f:s=>{s.pois+=1}},{k:"fast",n:"Quick feet",d:"+25% move speed",f:s=>{s.spd*=1.25}},{k:"mag",n:"Big mag",d:"+3 bullets, −20% damage",f:s=>{s.ammo+=3;s.dmg*=.8}},{k:"rel",n:"Fast hands",d:"Reload 40% faster, shoot quicker",f:s=>{s.rel*=.6;s.cd*=.7}},{k:"heavy",n:"Heavy rounds",d:"Bigger, slower bullets, +30% damage",f:s=>{s.br*=1.5;s.bs*=.8;s.dmg*=1.3}},{k:"vamp",n:"Vampire",d:"Heal 40% of the damage you deal",f:s=>{s.vamp+=.4}}];
+const baseStats=()=>({hp:100,r:14,spd:150,ammo:3,dmg:25,bs:430,br:4,bn:0,pois:0,rel:1.6,cd:.28,vamp:0});
+let G=null;const isH=()=>S.room&&S.room.host===S.uid;
+function shotGame(){const r=S.room,h=isHost(),m=r.mode||"1v1",need=SMODES[m].n,ok=S.players.length===need;let b;
+ if(r.phase==="lobby")b=h?`<div class="card"><p>Top-down arena duel. Move with WASD, aim and shoot with the mouse. Everyone picks an upgrade before round 1, then the losers pick after each round. First to 5 round wins takes the match!</p><label class="chk" style="gap:10px">Mode <select style="width:auto;margin:0" onchange="shotOpt('mode',this.value)">${Object.keys(SMODES).map(k=>`<option ${k===m?"selected":""}>${k}</option>`).join("")}</select></label><label class="chk" style="gap:10px;margin-top:8px">Map <select style="width:auto;margin:0" onchange="shotOpt('smap',this.value)"><option value="r" ${(r.smap||"r")==="r"?"selected":""}>Random</option>${SMAPS.map((x,i)=>`<option value="${i}" ${String(r.smap)===String(i)?"selected":""}>${x.n}</option>`).join("")}</select></label><button style="width:100%;margin-top:10px" ${ok?"":"disabled"} onclick="startShot()">Start match</button><p class="mute">${ok?"Ready!":`${m} needs exactly ${need} players (${S.players.length} here).`}</p></div>`:`<p class="sub" style="text-align:center">Waiting for the host to start… (${m}, ${need} players)</p>`;
+ else b=`<div class="card" style="text-align:center"><div class="big">🔫</div><p>Match in progress…</p></div>`;
+ return frame("Mongrel Shot",{...r,phase:"lobby"},b,"")}
+function shotOpt(k,v){guard(()=>S.db.doc("rooms/"+S.code).update({[k]:v}))}
+function startShot(){guard(async()=>{const r=S.room,ps=S.players,m=r.mode||"1v1",md=SMODES[m];if(ps.length!==md.n){S.err=`${m} needs exactly ${md.n} players.`;return}
+ const ids=shuffle(ps.map(p=>p.id)),cols=shuffle(COLORS),teams={},colors={};ids.forEach((id,i)=>{teams[id]=md.teams===ps.length?i:i%2;colors[id]=cols[i]});
+ await S.db.doc("rooms/"+S.code).update({phase:"play",shot:{gid:Date.now().toString(36),mode:m,map:r.smap||"r",teams,colors}})})}
+function shotSync(){const r=S.room;if(!r||r.game!=="shot")return;if(r.phase==="play"&&r.shot&&(!G||G.gid!==r.shot.gid))shotStart(r.shot);else if(r.phase!=="play"&&G)shotStop()}
+const kd=e=>{if(!G||e.target.tagName==="INPUT")return;const k=e.key.toLowerCase();G.keys[k]=1;if(k.startsWith("arrow")||k===" ")e.preventDefault()},ku=e=>{if(G)G.keys[e.key.toLowerCase()]=0};
+function shotStart(sh){shotStop();const ps=S.players.filter(p=>sh.teams[p.id]!=null);
+ G={gid:sh.gid,mode:sh.mode,mapPref:sh.map,P:{},B:[],walls:[],phase:"wait",round:0,scores:Array(SMODES[sh.mode].teams).fill(0),keys:{},mx:300,my:300,md:false,bn:0,ls:0,t:performance.now(),t0:performance.now(),timers:[],peers:{},sig:{},picked:{},pickIds:[],cards:[],banner:"",msg:"Connecting players…"};
+ G.tm=(f,ms)=>G.timers.push(setTimeout(()=>{if(G)f()},ms));
+ ps.forEach(p=>G.P[p.id]={id:p.id,name:p.name,color:sh.colors[p.id],team:sh.teams[p.id],st:baseStats(),x:300,y:300,tx:300,ty:300,a:0,hp:100,alive:true,ammo:3,rt:0,cd:0,pd:0,pt:0});
+ G.ids=Object.keys(G.P).sort((a,b)=>G.P[a].team-G.P[b].team||(a<b?-1:1));
+ const d=document.createElement("div");d.id="shot";d.innerHTML=`<div id="sh-top"></div><div id="sh-box"><canvas id="sh-cv" width="900" height="900"></canvas><div id="sh-ov"></div></div><div class="mute" style="margin-top:10px;text-align:center">WASD / arrows to move · mouse to aim &amp; shoot · touch: left side moves, right side aims <button class="ghost sm" onclick="shotLeave()">Leave match</button></div>`;document.body.appendChild(d);
+ const c=$("#sh-cv"),pos=e=>{const b=c.getBoundingClientRect();return[(e.clientX-b.left)/b.width*600,(e.clientY-b.top)/b.height*600]},cl=v=>Math.max(-1,Math.min(1,v));
+ c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);const p=pos(e);if(e.pointerType==="touch"&&p[0]<300){G.js={id:e.pointerId,ox:p[0],oy:p[1]};G.jx=G.jy=0}else{G.mx=p[0];G.my=p[1];G.md=true;G.aid=e.pointerId}};
+ c.onpointermove=e=>{const p=pos(e);if(G.js&&e.pointerId===G.js.id){G.jx=cl((p[0]-G.js.ox)/40);G.jy=cl((p[1]-G.js.oy)/40)}else{G.mx=p[0];G.my=p[1]}};
+ c.onpointerup=c.onpointercancel=e=>{if(G.js&&e.pointerId===G.js.id){G.js=null;G.jx=G.jy=0}else if(e.pointerId===G.aid)G.md=false};
+ document.addEventListener("keydown",kd);document.addEventListener("keyup",ku);
+ topBar();uiRefresh();netInit();G.raf=requestAnimationFrame(loop)}
+function shotStop(){if(!G)return;cancelAnimationFrame(G.raf);clearInterval(G.chk);G.timers.forEach(clearTimeout);if(G.unsub)G.unsub();Object.values(G.peers).forEach(p=>{try{p.pc.close()}catch(e){}});document.removeEventListener("keydown",kd);document.removeEventListener("keyup",ku);const d=$("#shot");if(d)d.remove();G=null;render()}
+function shotLeave(){shotStop();leave()}
+/* networking: WebRTC data channels, signalling through Firestore */
+const gathered=pc=>new Promise(r=>{if(pc.iceGatheringState==="complete")return r();const f=()=>{if(pc.iceGatheringState==="complete"){pc.removeEventListener("icegatheringstatechange",f);r()}};pc.addEventListener("icegatheringstatechange",f);setTimeout(r,3000)});
+function pcNew(o){const pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});G.peers[o]={pc,open:false};pc.onconnectionstatechange=()=>{if(["failed","closed"].includes(pc.connectionState))peerGone(o)};return pc}
+function dcSetup(o,dc){const p=G.peers[o];p.dc=dc;dc.onopen=()=>{p.open=true};dc.onclose=()=>peerGone(o);dc.onmessage=e=>{try{handle(o,JSON.parse(e.data))}catch(x){console.error(x)}}}
+const sigDoc=(a,b,k)=>S.db.doc(`rooms/${S.code}/sig/${G.gid}_${a}_${b}_${k}`);
+async function makeOffer(o){const pc=pcNew(o);dcSetup(o,pc.createDataChannel("g"));await pc.setLocalDescription(await pc.createOffer());await gathered(pc);await sigDoc(S.uid,o,"o").set({gid:G.gid,to:o,from:S.uid,k:"o",sdp:pc.localDescription.sdp})}
+async function onOffer(x){const pc=pcNew(x.from);pc.ondatachannel=e=>dcSetup(x.from,e.channel);await pc.setRemoteDescription({type:"offer",sdp:x.sdp});await pc.setLocalDescription(await pc.createAnswer());await gathered(pc);await sigDoc(S.uid,x.from,"a").set({gid:G.gid,to:x.from,from:S.uid,k:"a",sdp:pc.localDescription.sdp})}
+function netInit(){const me=S.uid,gid=G.gid,quiet=()=>{};
+ G.unsub=S.db.collection(`rooms/${S.code}/sig`).onSnapshot(q=>q.docs.forEach(d=>{if(!G||G.sig[d.id])return;const x=d.data();if(x.gid!==gid||x.to!==me)return;G.sig[d.id]=1;if(x.k==="o")onOffer(x).catch(quiet);else{const p=G.peers[x.from];if(p)p.pc.setRemoteDescription({type:"answer",sdp:x.sdp}).catch(quiet)}}));
+ G.ids.filter(o=>o!==me&&me<o).forEach(o=>makeOffer(o).catch(quiet));
+ G.chk=setInterval(()=>{if(!G||G.phase!=="wait"||!isH())return;if(G.ids.filter(o=>o!==me).every(o=>G.peers[o]&&G.peers[o].open))emit({t:"pk",ids:G.ids});else if(performance.now()-G.t0>25000){alert("Couldn’t connect everyone directly (a network may be blocking it). Back to the lobby.");S.db.doc("rooms/"+S.code).update({phase:"lobby",shot:null}).catch(quiet)}},500)}
+function peerGone(o){if(G&&G.P[o]&&G.P[o].alive)handle(S.uid,{t:"k",id:o})}
+const send=m=>{const s=JSON.stringify(m);Object.values(G.peers).forEach(p=>{if(p.dc&&p.dc.readyState==="open")p.dc.send(s)})};
+const emit=m=>{send(m);handle(S.uid,m)};
+/* game logic */
+const names=t=>{const a=G.ids.filter(i=>G.P[i].team===t).map(i=>esc(G.P[i].name));return a.join(" & ")+(a.length>1?" win":" wins")};
+function handle(f,m){if(!G)return;const P=G.P,me=P[S.uid];
+ switch(m.t){
+ case"s":{const p=P[f];if(p){p.tx=m.x;p.ty=m.y;p.a=m.a;p.hp=m.hp;p.ammo=m.am}break}
+ case"b":G.B.push({...m.b,life:2.5});beep(300,.05,"square",.03);break;
+ case"x":G.B=G.B.filter(b=>b.id!==m.id);break;
+ case"hit":if(m.by===S.uid&&me.st.vamp)me.hp=Math.min(me.st.hp,me.hp+m.dmg*me.st.vamp);break;
+ case"k":{const p=P[m.id];if(p&&p.alive){p.alive=false;p.hp=0;beep(150,.3,"sawtooth",.07);if(isH())checkEnd()}break}
+ case"u":{const p=P[m.id],u=UPS.find(x=>x.k===m.k);if(p&&u){u.f(p.st);G.picked[m.id]=1;if(isH())checkPicks()}break}
+ case"pk":G.phase="pick";G.pickIds=m.ids;G.picked={};G.rsSent=0;G.cards=shuffle(UPS.map(u=>u.k)).slice(0,3);break;
+ case"rs":shotRound(m);break;
+ case"re":G.phase="end";G.scores=m.sc;G.banner=m.w>=0?names(m.w)+" the round!":"Draw — nobody scores";topBar();break;
+ case"mo":G.phase="over";G.scores=m.sc;G.banner=names(m.w)+" the match!";topBar();chord([523,659,784,1047]);break}
+ if(["k","u","pk","rs","re","mo"].includes(m.t))uiRefresh()}
+function checkEnd(){if(G.phase!=="play")return;const al=[...new Set(Object.values(G.P).filter(p=>p.alive).map(p=>p.team))];if(al.length>1)return;const w=al.length?al[0]:-1,sc=[...G.scores];if(w>=0)sc[w]++;emit({t:"re",w,sc});const fin=sc.findIndex(x=>x>=5);
+ if(fin>=0)G.tm(()=>{emit({t:"mo",w:fin,sc});matchOver(fin)},2500);else G.tm(()=>emit({t:"pk",ids:w<0?G.ids:G.ids.filter(i=>G.P[i].team!==w)}),2500)}
+function checkPicks(){if(G.phase!=="pick"||G.rsSent||!G.pickIds.every(i=>G.picked[i]))return;G.rsSent=1;G.tm(()=>emit({t:"rs",n:G.round+1,m:G.mapPref==="r"?Math.floor(Math.random()*SMAPS.length):+G.mapPref}),400)}
+function matchOver(w){const b=S.db.batch();G.ids.filter(i=>G.P[i].team===w).forEach(i=>b.update(S.db.doc(`rooms/${S.code}/players/${i}`),{score:firebase.firestore.FieldValue.increment(1)}));b.commit().catch(()=>{});G.tm(()=>S.db.doc("rooms/"+S.code).update({phase:"lobby",shot:null}).catch(()=>{}),5000)}
+function shotRound(m){G.round=m.n;G.walls=SMAPS[m.m].w;G.mapName=SMAPS[m.m].n;G.B=[];const sp=SPAWNS[G.mode];G.ids.forEach((id,i)=>{const p=G.P[id],st=p.st;p.x=p.tx=sp[i][0];p.y=p.ty=sp[i][1];p.hp=st.hp;p.alive=true;p.ammo=st.ammo;p.rt=0;p.cd=0;p.pt=0;p.a=sp[i][0]<300?0:Math.PI});G.phase="count";G.cdEnd=performance.now()+2200;topBar()}
+function pickUp(k){emit({t:"u",id:S.uid,k})}
+function topBar(){const el=$("#sh-top");if(!el)return;const T={};G.ids.forEach(id=>{const p=G.P[id];(T[p.team]=T[p.team]||[]).push(p)});el.innerHTML=Object.keys(T).map(k=>`<div class="sc">${T[k].map(p=>`<i style="background:${p.color}"></i>${esc(p.name)}`).join(" ")}<b>${G.scores[k]}</b></div>`).join("")+`<div class="sc" style="box-shadow:none;font-weight:600">First to 5${G.mapName?" · "+G.mapName:""}</div>`}
+function uiRefresh(){const o=$("#sh-ov");if(!o)return;let h="",bg="transparent";
+ if(G.phase==="wait"){h=`<b style="font-size:20px">${G.msg}</b>`;bg="#000a"}
+ else if(G.phase==="pick"){bg="#000b";if(G.pickIds.includes(S.uid)&&!G.picked[S.uid])h=`<b style="font-size:20px">Choose an upgrade</b>`+G.cards.map(k=>{const u=UPS.find(x=>x.k===k);return`<button class="ucard" onclick="pickUp('${k}')"><b>${u.n}</b><br><span style="font-weight:400">${u.d}</span></button>`}).join("");else h=`<b style="font-size:18px">Waiting for ${G.pickIds.filter(i=>!G.picked[i]).map(i=>esc(G.P[i].name)).join(", ")||"everyone"} to pick…</b>`}
+ else if(G.phase==="end"){bg="#0006";h=`<b style="font-size:26px">${G.banner}</b>`}
+ else if(G.phase==="over"){bg="#000b";h=`<b style="font-size:30px">🏆 ${G.banner}</b>`}
+ o.style.background=bg;o.innerHTML=h}
+function pushOut(o,r){G.walls.forEach(([x,y,w,h])=>{const cx=Math.max(x,Math.min(o.x,x+w)),cy=Math.max(y,Math.min(o.y,y+h)),dx=o.x-cx,dy=o.y-cy,d=Math.hypot(dx,dy);if(d<r){if(d>0){o.x+=dx/d*(r-d);o.y+=dy/d*(r-d)}else o.x+=r}});o.x=Math.max(r,Math.min(600-r,o.x));o.y=Math.max(r,Math.min(600-r,o.y))}
+function fire(me){const st=me.st,a=me.a;me.ammo--;me.cd=st.cd;emit({t:"b",b:{id:S.uid+(G.bn++),o:S.uid,x:me.x+Math.cos(a)*(st.r+6),y:me.y+Math.sin(a)*(st.r+6),vx:Math.cos(a)*st.bs,vy:Math.sin(a)*st.bs,r:st.br,dmg:st.dmg,bn:st.bn,pois:st.pois}})}
+function hurt(me,b){me.hp-=b.dmg;if(b.pois){me.pt=3;me.pd=8*b.pois}beep(140,.12,"sawtooth",.06);send({t:"x",id:b.id});send({t:"hit",by:b.o,dmg:b.dmg});if(me.hp<=0)emit({t:"k",id:S.uid})}
+function step(t,dt){const me=G.P[S.uid],K=G.keys,st=me.st;if(G.phase==="count"&&t>=G.cdEnd){G.phase="play";beep(660,.2,"square",.06)}
+ const live=G.phase==="play";
+ if(live&&me.alive){let dx=(K.d||K.arrowright?1:0)-(K.a||K.arrowleft?1:0)+(G.jx||0),dy=(K.s||K.arrowdown?1:0)-(K.w||K.arrowup?1:0)+(G.jy||0);const m=Math.hypot(dx,dy);if(m>1){dx/=m;dy/=m}
+  me.x+=dx*st.spd*dt;me.y+=dy*st.spd*dt;pushOut(me,st.r);me.a=Math.atan2(G.my-me.y,G.mx-me.x);
+  me.cd-=dt;if(me.ammo<=0&&me.rt<=0)me.rt=st.rel;if(me.rt>0){me.rt-=dt;if(me.rt<=0){me.ammo=st.ammo;me.rt=0}}
+  if(G.md&&me.ammo>0&&me.cd<=0&&me.rt<=0)fire(me);
+  if(me.pt>0){me.pt-=dt;me.hp-=me.pd*dt;if(me.hp<=0)emit({t:"k",id:S.uid})}
+  if(t-G.ls>50){G.ls=t;send({t:"s",x:+me.x.toFixed(1),y:+me.y.toFixed(1),a:+me.a.toFixed(2),hp:Math.round(me.hp),am:me.ammo})}}
+ G.ids.forEach(id=>{if(id===S.uid)return;const p=G.P[id],k=Math.min(1,dt*14);p.x+=(p.tx-p.x)*k;p.y+=(p.ty-p.y)*k});
+ if(G.phase==="pick")G.B=[];
+ G.B=G.B.filter(b=>{b.life-=dt;if(b.life<=0)return false;b.x+=b.vx*dt;b.y+=b.vy*dt;
+  for(const[a,c,w,h]of G.walls){const cx=Math.max(a,Math.min(b.x,a+w)),cy=Math.max(c,Math.min(b.y,c+h)),dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy);if(d<b.r){if(b.bn>0&&d>0){const nx=dx/d,ny=dy/d,dot=b.vx*nx+b.vy*ny;b.vx-=2*dot*nx;b.vy-=2*dot*ny;b.x=cx+nx*(b.r+.5);b.y=cy+ny*(b.r+.5);b.bn--;beep(520,.04,"square",.03)}else return false;break}}
+  if(b.x<b.r||b.x>600-b.r||b.y<b.r||b.y>600-b.r){if(b.bn>0){if(b.x<b.r||b.x>600-b.r)b.vx*=-1;else b.vy*=-1;b.x=Math.max(b.r,Math.min(600-b.r,b.x));b.y=Math.max(b.r,Math.min(600-b.r,b.y));b.bn--}else return false}
+  const o=G.P[b.o];if(live&&me.alive&&o&&b.o!==S.uid&&o.team!==me.team&&Math.hypot(b.x-me.x,b.y-me.y)<st.r+b.r){hurt(me,b);return false}
+  return true})}
+function draw(t){const c=$("#sh-cv");if(!c)return;const x=c.getContext("2d");x.setTransform(1.5,0,0,1.5,0,0);x.fillStyle="#2a2630";x.fillRect(0,0,600,600);
+ x.strokeStyle="rgba(255,255,255,.05)";x.lineWidth=1;for(let i=50;i<600;i+=50){x.beginPath();x.moveTo(i,0);x.lineTo(i,600);x.moveTo(0,i);x.lineTo(600,i);x.stroke()}
+ x.fillStyle="#8d8499";x.strokeStyle="#d8d1e0";x.lineWidth=2;G.walls.forEach(([a,b,w,h])=>{x.fillRect(a,b,w,h);x.strokeRect(a,b,w,h)});
+ G.B.forEach(b=>{const o=G.P[b.o];x.fillStyle=o?o.color:"#fff";x.strokeStyle=b.pois?"#69db7c":"#111";x.lineWidth=2;x.beginPath();x.arc(b.x,b.y,b.r,0,7);x.fill();x.stroke()});
+ G.ids.forEach((id,i)=>{const p=G.P[id],r=p.st.r,ex=Math.cos(p.a),ey=Math.sin(p.a),w=.05*Math.sin(t/160+i*2);x.globalAlpha=p.alive?1:.22;
+  x.strokeStyle="#222";x.lineWidth=5;x.lineCap="round";x.beginPath();x.moveTo(p.x+ex*r*.5,p.y+ey*r*.5);x.lineTo(p.x+ex*(r+9),p.y+ey*(r+9));x.stroke();
+  x.fillStyle=p.color;x.strokeStyle=p.pt>0?"#69db7c":"#1d1b20";x.lineWidth=3;x.beginPath();x.ellipse(p.x,p.y,r*(1+w),r*(1-w),0,0,7);x.fill();x.stroke();
+  for(const s of[-1,1]){const ox=p.x+ex*r*.35-ey*s*r*.35,oy=p.y+ey*r*.35+ex*s*r*.35;x.fillStyle="#fff";x.beginPath();x.arc(ox,oy,r*.26,0,7);x.fill();x.fillStyle="#111";x.beginPath();x.arc(ox+ex*r*.1,oy+ey*r*.1,r*.12,0,7);x.fill()}
+  if(p.alive){const q=Math.max(0,p.hp/p.st.hp);x.fillStyle="#000a";x.fillRect(p.x-18,p.y-r-13,36,5);x.fillStyle=q>.35?"#51cf66":"#ff6b6b";x.fillRect(p.x-18,p.y-r-13,36*q,5);x.fillStyle="#fff";x.font="bold 10px sans-serif";x.textAlign="center";x.fillText(p.name,p.x,p.y-r-17);x.fillStyle="#ffd43b";for(let k=0;k<p.ammo;k++){x.beginPath();x.arc(p.x-(p.ammo-1)*3+k*6,p.y+r+8,2.2,0,7);x.fill()}}
+  x.globalAlpha=1});
+ if(G.phase==="count"){const n=Math.ceil((G.cdEnd-t)/1000);x.fillStyle="#fff";x.font="bold 80px sans-serif";x.textAlign="center";x.fillText(n>1?n-1:"FIGHT!",300,320)}
+ const me=G.P[S.uid];if(me&&me.alive&&me.rt>0&&G.phase==="play"){x.fillStyle="#fff";x.font="bold 12px sans-serif";x.textAlign="center";x.fillText("reloading…",me.x,me.y+me.st.r+22)}}
+function loop(t){if(!G)return;const dt=Math.min(.05,Math.max(0,(t-G.t)/1000));G.t=t;try{step(t,dt);draw(t)}catch(e){console.error(e)}if(G)G.raf=requestAnimationFrame(loop)}
 function home(){return `<h1>Mongrel Games</h1><p class="sub">${GN[S.game]||GN.imp} · <a class="lnk" onclick="S.page='games';render()">all games</a></p>
 <div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
@@ -278,9 +398,9 @@ function manage(){const cs=cats();
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
 ${cs.map((c,i)=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>${esc(c.name)}</b> <span class="mute">(${c.words.length})</span></span><button class="ghost sm" style="margin:0" onclick="delCat(${i})">🗑 Delete category</button></div><div>${c.words.map((w,j)=>`<span class="pill">${esc(w)}${c.hints[w.toLowerCase()]?` <i style="font-weight:400">— ${esc(c.hints[w.toLowerCase()])}</i>`:""} <a style="cursor:pointer;margin-left:4px" title="${c.hints[w.toLowerCase()]?"Edit":"Add"} hint" onclick="editHint(${i},${j})">💡</a><a style="cursor:pointer;margin-left:4px" title="Delete word" onclick="delWord(${i},${j})">✕</a></span>`).join("")}</div></div>`).join("")}`}
 
-function game(){const g=S.room.game;return g==="wave"?waveGame():g==="hang"?hangGame():g==="scat"?scatGame():impGame()}
+function game(){const g=S.room.game;return g==="wave"?waveGame():g==="hang"?hangGame():g==="scat"?scatGame():g==="shot"?shotGame():impGame()}
 function impGame(){const r=S.room,h=isHost(),me=r.impostor===S.uid;let b="";
- const head=`<div class="card"><div class="mute" style="text-align:center">Room code — share it with friends</div><div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap"><div class="code">${esc(S.code)}</div><button class="ghost sm" style="margin:0" onclick="copyLink(this)">🔗 Copy invite link</button></div><div>${S.players.map(p=>`<span class="pill">${p.id===r.host?"👑 ":""}${esc(p.name)}${p.id===S.uid?" (you)":""}</span>`).join("")}</div></div>`;
+ const head=`<div class="card"><div class="mute" style="text-align:center">Room code — share it with friends</div><div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap"><div class="code">${esc(S.code)}</div><button class="ghost sm" style="margin:0" onclick="copyLink(this)">🔗 Copy invite link</button></div><div>${S.players.map(p=>`<span class="pill">${p.id===r.host?"👑 ":""}${esc(p.name)}${p.id===S.uid?" (you)":""}${kickLnk(p.id)}</span>`).join("")}</div></div>`;
  if(r.phase==="lobby"){const cs=cats();if(!S.sel)S.sel=new Set(cs.map(c=>c.name));
   b=h?`<div class="card"><h2>Categories in play</h2>${cs.map(c=>`<label class="chk"><input type="checkbox" ${S.sel.has(c.name)?"checked":""} onchange="togCat(${JSON.stringify(c.name).replace(/"/g,"&quot;")},this.checked)"> ${esc(c.name)} <span class="mute">(${c.words.length})</span></label>`).join("")}${roundsSel(r)}<label class="chk" style="margin-top:10px"><input type="checkbox" ${r.guessOn?"checked":""} onchange="setGuess(this.checked)"> Impostor can win by guessing the word</label><label class="chk" style="margin-top:6px"><input type="checkbox" ${r.hintOn?"checked":""} onchange="setHintOn(this.checked)"> Impostor gets a hint when they speak first</label><button style="width:100%;margin-top:10px" ${S.players.length<3||!S.sel.size?"disabled":""} onclick="startRound()">Start round</button>${S.players.length<3?`<p class="mute">Need at least 3 players.</p>`:""}</div>`:`<p class="sub" style="text-align:center">Waiting for the host to start…${r.guessOn?"<br>The impostor may guess the word to win.":""}</p>`}
  else if(r.phase==="play"){b=`<div class="card" style="text-align:center"><div class="mute">Round ${rn(r)}/${r.rounds||5} · Category</div><div class="big">${esc(r.category)}</div>
@@ -301,17 +421,17 @@ const needName=()=>{S.name=S.name.trim();if(!S.name){S.err="Please enter a nickn
 function togCat(n,on){on?S.sel.add(n):S.sel.delete(n);render()}
 function createRoom(){if(!needName())return;guard(async()=>{const code=Array.from({length:4},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")).join("");
  await S.db.doc("rooms/"+code).set({host:S.uid,phase:"lobby",round:0,created:Date.now(),game:S.game||"imp"});await enter(code)})}
-function joinRoom(c){if(!needName())return;c=(c||"").trim().toUpperCase();guard(async()=>{const s=await S.db.doc("rooms/"+c).get();if(!s.exists){S.err="No room with that code.";return}S.game=s.data().game||"imp";await enter(c)})}
+function joinRoom(c){if(!needName())return;c=(c||"").trim().toUpperCase();guard(async()=>{const s=await S.db.doc("rooms/"+c).get();if(!s.exists){S.err="No room with that code.";return}if((s.data().kicked||[]).includes(S.uid)){S.err="You were removed from that room.";return}S.game=s.data().game||"imp";await enter(c)})}
 async function enter(code){await S.db.doc(`rooms/${code}/players/${S.uid}`).set({name:S.name,joined:Date.now()});ls.set("room",code);sub(code)}
 function sub(code){unsub();S.code=code;S.adv=null;S.claim=null;S.rseen={};S.rinit=false;S.page="home";
- S.unsubs.push(S.db.doc("rooms/"+code).onSnapshot(s=>{S.room=s.exists?s.data():null;if(S.room){const ph=S.room.phase;if(ph!==S.lastPhase){if(ph==="reveal"){const p=(S.room.pts||{})[S.uid]||0;p?chord(p>=3?[523,659,784,1047]:[523,659]):beep(190,.3,"sawtooth",.05)}if(ph==="result")chord([392,523,659])}S.lastPhase=ph}if(S.room&&S.room.phase==="play")S.show=S.show&&S.lastRound===S.room.round;S.lastRound=S.room&&S.room.round;render()},e=>{S.err="Connection problem.";render()}));
+ S.unsubs.push(S.db.doc("rooms/"+code).onSnapshot(s=>{S.room=s.exists?s.data():null;kickCheck();shotSync();if(S.room){const ph=S.room.phase;if(ph!==S.lastPhase){if(ph==="reveal"){const p=(S.room.pts||{})[S.uid]||0;p?chord(p>=3?[523,659,784,1047]:[523,659]):beep(190,.3,"sawtooth",.05)}if(ph==="result")chord([392,523,659])}S.lastPhase=ph}if(S.room&&S.room.phase==="play")S.show=S.show&&S.lastRound===S.room.round;S.lastRound=S.room&&S.room.round;render()},e=>{S.err="Connection problem.";render()}));
  S.unsubs.push(S.db.collection(`rooms/${code}/players`).onSnapshot(q=>{S.players=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.joined-b.joined);checkReacts();render()}))}
 function unsub(){S.unsubs.forEach(f=>f());S.unsubs=[]}
 function startRound(){guard(async()=>{if(!S.sel)S.sel=new Set(cats().map(c=>c.name));const cs=cats().filter(c=>S.sel&&S.sel.has(c.name)&&c.words.length);if(!cs.length){S.err="Select a category with words.";return}
  const c=pick(cs),w=pick(c.words),ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"play",guess:null,guessOk:null,round:(S.room.round||0)+1,r0:S.room.phase==="lobby"?(S.room.round||0):(S.room.r0||0),category:c.name,word:w,hint:c.hints[w.toLowerCase()]||null,hintLetter:letterOf(w),impostor:pick(ps).id,hr:1,order:shuffle(ps.map(p=>p.id)),dl:Date.now()+30000});S.show=false})}
 function setPhase(p){guard(()=>S.db.doc("rooms/"+S.code).update({phase:p}))}
 function castVote(t){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({vote:{round:S.room.round,target:t}}))}
-function leave(){guard(async()=>{const c=S.code;unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");await S.db.doc(`rooms/${c}/players/${S.uid}`).delete()})}
+function leave(){guard(async()=>{shotStop();const c=S.code;unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");await S.db.doc(`rooms/${c}/players/${S.uid}`).delete()})}
 function saveCat(name,words){name=(name||"").trim();const items=(words||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean).map(x=>{const i=x.indexOf("=");return i>0?{w:x.slice(0,i).trim(),h:x.slice(i+1).trim()}:{w:x,h:""}}).filter(x=>x.w),ws=items.map(x=>x.w);
  if(!name||!ws.length){S.err="Enter a name and at least one word.";render();return}
  guard(async()=>{const ref=S.db.collection("custom").doc(hash(name)),s=await ref.get(),od=s.exists?s.data():{},all=[...(od.words||[])],hints=[...(od.hints||[])];
