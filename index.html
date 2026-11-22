@@ -94,20 +94,16 @@ main{padding-bottom:90px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 // PASTE YOUR FIREBASE CONFIG HERE (Firebase console → Project settings → Your apps → Web app)
 const FIREBASE_CONFIG={
 apiKey: "AIzaSyDsKPs-QjS-uxRHNgGBHawe4IYG87D-DLs",
 authDomain: "mongrelgames-d07d7.firebaseapp.com",
 projectId: "mongrelgames-d07d7",
+databaseURL: "https://mongrelgames-d07d7-default-rtdb.europe-west1.firebasedatabase.app/", // must match the URL shown in Firebase → Realtime Database (needed for Mongrel Shot)
 appId: "1:773393221714:web:38297c704a5c610965b78b"
 };
-/* ---- OPTIONAL: relay (TURN) server so Mongrel Shot works between different networks ----
-   Easiest: sign up free at metered.ca, create a TURN app, then paste its credentials URL here, e.g.
-   "https://YOURAPP.metered.live/api/v1/turn/credentials?apiKey=YOURKEY". Leave "" to use the public fallback. */
-const TURN_API_URL="";
-/* Or paste servers by hand: [{urls:["turn:host:80","turns:host:443?transport=tcp"],username:"...",credential:"..."}] */
-const EXTRA_ICE=[];
 const BUILT=[
 ["Animals","Lion,Penguin,Dolphin,Giraffe,Octopus,Kangaroo,Owl,Elephant,Fox,Turtle,Bat,Camel"],
 ["Food","Pizza,Sushi,Tacos,Pancakes,Ice cream,Burger,Pierogi,Lasagna,Salad,Popcorn,Soup,Croissant"],
@@ -323,28 +319,22 @@ function shotStart(sh){shotStop();const ps=S.players.filter(p=>sh.teams[p.id]!=n
  c.onpointerup=c.onpointercancel=e=>{if(G.js&&e.pointerId===G.js.id){G.js=null;G.jx=G.jy=0}else if(e.pointerId===G.aid)G.md=false};
  document.addEventListener("keydown",kd);document.addEventListener("keyup",ku);
  topBar();uiRefresh();netInit();startLoop()}
-function shotStop(){if(!G)return;cancelAnimationFrame(G.raf);clearInterval(G.chk);clearInterval(G.iv);if(G.wk)G.wk.terminate();G.timers.forEach(clearTimeout);if(G.unsub)G.unsub();Object.values(G.peers).forEach(p=>{try{p.pc.close()}catch(e){}});document.removeEventListener("keydown",kd);document.removeEventListener("keyup",ku);const d=$("#shot");if(d)d.remove();G=null;render()}
+function shotStop(){if(!G)return;cancelAnimationFrame(G.raf);clearInterval(G.chk);clearInterval(G.iv);if(G.wk)G.wk.terminate();if(G.net){try{G.net.hi.off();G.net.ev.off();G.net.st.off();G.net.hi.child(S.uid).remove();if(isH())G.net.base.remove()}catch(e){}}G.timers.forEach(clearTimeout);if(G.unsub)G.unsub();Object.values(G.peers).forEach(p=>{try{p.pc.close()}catch(e){}});document.removeEventListener("keydown",kd);document.removeEventListener("keyup",ku);const d=$("#shot");if(d)d.remove();G=null;render()}
 function shotLeave(){shotStop();leave()}
-/* networking: WebRTC data channels, signalling through Firestore */
-const gathered=pc=>new Promise(r=>{if(pc.iceGatheringState==="complete")return r();const f=()=>{if(pc.iceGatheringState==="complete"){pc.removeEventListener("icegatheringstatechange",f);r()}};pc.addEventListener("icegatheringstatechange",f);setTimeout(r,6000)});
-let ICE=null;
-async function loadIce(){if(ICE)return ICE;let l=[{urls:["stun:stun.l.google.com:19302","stun:stun1.l.google.com:19302","stun:stun.cloudflare.com:3478"]},...EXTRA_ICE];
- if(TURN_API_URL){try{const j=await(await fetch(TURN_API_URL)).json();if(Array.isArray(j))l=l.concat(j)}catch(e){console.error("TURN fetch failed",e)}}
- else if(!EXTRA_ICE.length)l.push({urls:["turn:openrelay.metered.ca:80","turn:openrelay.metered.ca:443","turns:openrelay.metered.ca:443?transport=tcp"],username:"openrelayproject",credential:"openrelayproject"});
- return ICE=l}
-function pcNew(o){const pc=new RTCPeerConnection({iceServers:ICE||[{urls:"stun:stun.l.google.com:19302"}],iceCandidatePoolSize:4});G.peers[o]={pc,open:false};pc.onconnectionstatechange=()=>{if(["failed","closed"].includes(pc.connectionState))peerGone(o)};return pc}
-function dcSetup(o,dc){const p=G.peers[o];p.dc=dc;dc.onopen=()=>{p.open=true};dc.onclose=()=>peerGone(o);dc.onmessage=e=>{try{handle(o,JSON.parse(e.data))}catch(x){console.error(x)}}}
-const sigDoc=(a,b,k)=>S.db.doc(`rooms/${S.code}/sig/${G.gid}_${a}_${b}_${k}`);
-async function makeOffer(o){await loadIce();const pc=pcNew(o);dcSetup(o,pc.createDataChannel("g"));await pc.setLocalDescription(await pc.createOffer());await gathered(pc);await sigDoc(S.uid,o,"o").set({gid:G.gid,to:o,from:S.uid,k:"o",sdp:pc.localDescription.sdp})}
-async function onOffer(x){await loadIce();const pc=pcNew(x.from);pc.ondatachannel=e=>dcSetup(x.from,e.channel);await pc.setRemoteDescription({type:"offer",sdp:x.sdp});await pc.setLocalDescription(await pc.createAnswer());await gathered(pc);await sigDoc(S.uid,x.from,"a").set({gid:G.gid,to:x.from,from:S.uid,k:"a",sdp:pc.localDescription.sdp})}
-function netInit(){const me=S.uid,gid=G.gid,quiet=()=>{};
- G.unsub=S.db.collection(`rooms/${S.code}/sig`).onSnapshot(q=>q.docs.forEach(d=>{if(!G||G.sig[d.id])return;const x=d.data();if(x.gid!==gid||x.to!==me)return;G.sig[d.id]=1;if(x.k==="o")onOffer(x).catch(quiet);else{const p=G.peers[x.from];if(p)p.pc.setRemoteDescription({type:"answer",sdp:x.sdp}).catch(quiet)}}));
- G.ids.filter(o=>o!==me&&me<o).forEach(o=>makeOffer(o).catch(quiet));
+/* networking: Firebase Realtime Database relay (no direct connections needed) */
+function netInit(){const me=S.uid,quiet=()=>{};let rdb;
+ try{rdb=firebase.database()}catch(e){G.msg="Realtime Database isn’t set up yet (see the setup steps: databaseURL).";uiRefresh();return}
+ const base=rdb.ref(`net/${S.code}/${G.gid}`);G.net={base,ev:base.child("ev"),st:base.child("st"),hi:base.child("hi")};G.hello={};
+ const my=G.net.hi.child(me);try{my.onDisconnect().remove()}catch(e){}my.set(true).catch(quiet);
+ G.net.hi.on("child_added",x=>{if(G)G.hello[x.key]=1});
+ G.net.hi.on("child_removed",x=>{if(!G)return;delete G.hello[x.key];if(G.phase!=="over")peerGone(x.key)});
+ G.net.ev.on("child_added",x=>{const v=x.val();if(G&&v&&v.f!==me)try{handle(v.f,v.m)}catch(e){console.error(e)}});
+ const stIn=x=>{const v=x.val();if(G&&v&&x.key!==me)handle(x.key,v)};G.net.st.on("child_added",stIn);G.net.st.on("child_changed",stIn);
  G.chk=setInterval(()=>{if(!G||G.phase!=="wait")return;const oth=G.ids.filter(o=>o!==me);
-  G.msg="Connecting players…<br><span style='font-size:14px;font-weight:400'>"+oth.map(o=>{const p=G.peers[o];return esc(G.P[o].name)+": "+(p?(p.open?"connected ✓":(p.pc.iceConnectionState||"connecting")):"waiting for them")}).join(" · ")+"</span>";uiRefresh();
-  if(!isH())return;if(oth.every(o=>G.peers[o]&&G.peers[o].open))emit({t:"pk",ids:G.ids});else if(performance.now()-G.t0>45000){alert("Couldn’t connect everyone directly. A relay (TURN) server is needed on these networks — see the TURN_API_URL note at the top of index.html. Going back to the lobby.");S.db.doc("rooms/"+S.code).update({phase:"lobby",shot:null}).catch(quiet)}},500)}
+  G.msg="Connecting players…<br><span style='font-size:14px;font-weight:400'>"+oth.map(o=>esc(G.P[o].name)+": "+(G.hello[o]?"connected ✓":"waiting for them")).join(" · ")+"</span>";uiRefresh();
+  if(!isH())return;if(oth.every(o=>G.hello[o]))emit({t:"pk",ids:G.ids});else if(performance.now()-G.t0>40000){alert("Not everyone connected. Make sure everyone has refreshed the page, and that the Realtime Database is set up. Going back to the lobby.");S.db.doc("rooms/"+S.code).update({phase:"lobby",shot:null}).catch(quiet)}},500)}
 function peerGone(o){if(G&&G.P[o]&&G.P[o].alive)handle(S.uid,{t:"k",id:o})}
-const send=m=>{const s=JSON.stringify(m);Object.values(G.peers).forEach(p=>{if(p.dc&&p.dc.readyState==="open")p.dc.send(s)})};
+const send=m=>{if(!G||!G.net)return;try{if(m.t==="s")G.net.st.child(S.uid).set(m);else G.net.ev.push({f:S.uid,m})}catch(e){}};
 const emit=m=>{send(m);handle(S.uid,m)};
 /* game logic */
 const names=t=>{const a=G.ids.filter(i=>G.P[i].team===t).map(i=>esc(G.P[i].name));return a.join(" & ")+(a.length>1?" win":" wins")};
