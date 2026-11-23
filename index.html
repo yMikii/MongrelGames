@@ -80,7 +80,7 @@ main{padding-bottom:90px}
 #sh-top{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);left:0;right:0;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .sc{border:2px solid var(--ink);border-radius:12px;padding:4px 12px;background:var(--card);box-shadow:3px 3px 0 var(--ink);display:flex;gap:8px;align-items:center;font-weight:800}
 .sc i{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--ink)}.sc b{font-size:22px}
-#sh-box{position:relative;width:min(94vw,calc(100vh - 190px));aspect-ratio:1;border:3px solid var(--ink);border-radius:12px;overflow:hidden;box-shadow:6px 6px 0 var(--ink);background:#2a2630}
+#sh-box{position:relative;width:min(94vw,calc(100vh - 240px));aspect-ratio:1;border:3px solid var(--ink);border-radius:12px;overflow:hidden;box-shadow:6px 6px 0 var(--ink);background:#2a2630}
 #sh-box canvas{width:100%;height:100%;display:block;touch-action:none}
 #sh-ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;color:#fff;text-align:center;padding:10px}
 #sh-ov>*{pointer-events:auto}.cards{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
@@ -89,8 +89,18 @@ main{padding-bottom:90px}
 @media(max-width:560px){.cards{flex-direction:column;align-items:center}.ucard{width:92%;min-height:0;display:flex;align-items:center;gap:10px;text-align:left}.ucard .ic{font-size:30px}.ucard small{margin:0}}
 #sh-ov{overflow-y:auto}#sh-btns{position:absolute;left:8px;right:8px;bottom:8px;display:flex;justify-content:space-between;pointer-events:none}#sh-btns button{pointer-events:auto;padding:8px 12px;font-size:14px;color:#1d1b20;background:#fff}
 </style>
+<style>
+#eggR{display:none;position:fixed;z-index:3;right:22px;top:50%;transform:translateY(-50%);width:clamp(120px,18vw,240px);height:min(70vh,520px);cursor:pointer}
+@media(min-width:900px){body.egg-on #eggR{display:block}}
+#egg{position:fixed;inset:0;z-index:1000;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .6s}
+#egg.on{opacity:1}
+#egg .ch{width:min(280px,45vw);height:min(46vh,400px);margin-bottom:150px;background-size:contain;background-repeat:no-repeat;background-position:center;opacity:0;transition:opacity .8s;animation:bob 2s ease-in-out infinite}
+#egg .ch.show{opacity:1}@keyframes bob{50%{transform:translateY(-8px)}}
+#egg .tb{position:absolute;bottom:4vh;left:50%;transform:translateX(-50%);width:min(760px,92vw);min-height:150px;box-sizing:border-box;border:6px solid #fff;background:#000;color:#fff;padding:18px 24px;font:28px/1.35 "Determination Mono","Courier New",monospace;cursor:pointer;opacity:0;transition:opacity .3s;user-select:none}
+#egg .tb.show{opacity:1}#egg .tb i{position:absolute;right:16px;bottom:8px;font-style:normal;font-size:20px;animation:blink .8s steps(1) infinite}@keyframes blink{50%{opacity:0}}
+</style>
 </head>
-<body><button id="mute" onclick="toggleMute()" aria-label="Toggle sound">🔊</button><div id="rx"></div><div id="rwrap"><button class="ghost" onclick="sendReact('😂')" aria-label="Laugh">😂</button><button class="ghost" onclick="sendReact('🇹🇼')" aria-label="Taiwan flag">🇹🇼</button><button class="ghost" onclick="sendReact('🫃')" aria-label="Pregnant man">🫃</button></div><main id="app"><p class="sub">Loading…</p></main>
+<body><button id="mute" onclick="toggleMute()" aria-label="Toggle sound">🔊</button><div id="eggR" onclick="eggStart()"></div><div id="rx"></div><div id="rwrap"><button class="ghost" onclick="sendReact('😂')" aria-label="Laugh">😂</button><button class="ghost" onclick="sendReact('🇹🇼')" aria-label="Taiwan flag">🇹🇼</button><button class="ghost" onclick="sendReact('🫃')" aria-label="Pregnant man">🫃</button><button class="ghost" onclick="sendReact('🇮🇱')" aria-label="Israel flag">🇮🇱</button><button class="ghost" onclick="sendReact('🪬')" aria-label="Hamsa">🪬</button></div><main id="app"><p class="sub">Loading…</p></main>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -218,7 +228,7 @@ function revealWave(){const r=S.room,pts={};let m=0;S.players.filter(p=>p.id!==r
 function spawnReact(e){const el=document.createElement("span"),d=2.6+Math.random()*1.2,i=document.createElement("span");el.className="fl";el.style.right=(14+Math.random()*70)+"px";el.style.animationDuration=d+"s";i.className="sw";i.textContent=e;i.style.animationDuration=(.7+Math.random()*.6)+"s";el.appendChild(i);$("#rx").appendChild(el);setTimeout(()=>el.remove(),d*1000+100)}
 function sendReact(e){const t=Date.now();if(t-(S.rlast||0)<350||!S.code)return;S.rlast=t;const id=t+"-"+Math.random();S.rseen=S.rseen||{};S.rseen[S.uid]=id;spawnReact(e);S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({react:{e,id}}).catch(()=>{})}
 function checkReacts(){S.rseen=S.rseen||{};S.players.forEach(p=>{if(!p.react||S.rseen[p.id]===p.react.id)return;S.rseen[p.id]=p.react.id;if(S.rinit&&p.id!==S.uid)spawnReact(p.react.e)});S.rinit=true}
-function updReact(){$("#rwrap").style.display=S.code&&S.room&&S.room.phase&&S.room.phase!=="lobby"?"flex":"none"}
+function updReact(){$("#rwrap").style.display=S.code&&S.room&&S.room.phase&&S.room.phase!=="lobby"?"flex":"none";document.body.classList.toggle("egg-on",!!S.egg&&S.page==="games"&&!S.code)}
 function paintTimers(){const now=Date.now();document.querySelectorAll("[data-dl]").forEach(el=>{const d=+el.dataset.dl;if(!d)return;const t=Math.max(0,Math.ceil((d-now)/1000));el.textContent=t+"s";el.style.color=t<=5?"var(--acc)":""})}
 function tick(){paintTimers();const r=S.room;if(!S.db||!r)return;maybeAdvance();
  if(r.game==="wave"&&r.phase==="guess"&&r.dl&&Date.now()>r.dl&&r.maker!==S.uid){const m=S.players.find(p=>p.id===S.uid);if(m&&!(m.wg&&m.wg.round===r.round)&&S.alock!==r.dl){S.alock=r.dl;lockGuess()}}}
@@ -290,7 +300,9 @@ const SPAWNS={"1v1":[[90,500],[910,500]],"2v2":[[90,330],[90,670],[910,330],[910
 const pil=(xs,ys)=>xs.flatMap(x=>ys.map(y=>[x,y,44,44]));
 const SMAPS=[{n:"Pillars",w:[...pil([260,380,620,740],[200,340,660,800]),[460,460,80,80]],b:[[340,500],[660,500],[500,330],[500,670]],bu:[[300,420,70,160],[630,420,70,160],[420,120,160,80],[420,800,160,80]]},
 {n:"Cross",w:[[485,170,30,660],[280,485,440,30],[260,210,140,26],[260,210,26,130],[600,210,140,26],[714,210,26,130],[260,764,140,26],[260,660,26,130],[600,764,140,26],[714,660,26,130]],b:[[440,440],[560,560],[440,560],[560,440],[400,300],[600,700]],bu:[[300,380,100,100],[600,520,100,100],[300,520,100,100],[600,380,100,100]]},
-{n:"Corridors",w:[[200,200,360,28],[440,320,360,28],[200,440,360,28],[440,560,360,28],[200,680,360,28],[440,800,360,28]],b:[[350,380],[650,620],[350,740],[650,260],[500,500]],bu:[[580,150,200,90],[220,760,200,90],[620,640,160,90],[220,260,160,90]]}];
+{n:"Corridors",w:[[200,200,360,28],[440,320,360,28],[200,440,360,28],[440,560,360,28],[200,680,360,28],[440,800,360,28]],b:[[350,380],[650,620],[350,740],[650,260],[500,500]],bu:[[580,150,200,90],[220,760,200,90],[620,640,160,90],[220,260,160,90]]},
+{n:"Fortress",w:[[400,380,200,24],[400,596,200,24],[400,380,24,80],[400,540,24,80],[576,380,24,80],[576,540,24,80],[220,160,100,24],[220,160,24,100],[680,160,100,24],[756,160,24,100],[220,816,100,24],[220,740,24,100],[680,816,100,24],[756,740,24,100]],b:[[330,500],[670,500],[500,300],[500,700],[480,500],[520,500]],bu:[[250,420,90,160],[660,420,90,160],[420,180,160,70],[420,750,160,70]]},
+{n:"Islands",w:[[250,250,120,30],[630,250,120,30],[250,720,120,30],[630,720,120,30],[350,350,30,120],[620,350,30,120],[350,530,30,120],[620,530,30,120],[450,150,100,30],[450,820,100,30],[200,480,60,40],[740,480,60,40]],b:[[500,400],[500,600],[300,500],[700,500],[420,250],[580,750]],bu:[[430,460,140,80],[160,200,120,100],[720,700,120,100]]}];
 const COLORS=["#ff6b6b","#4dabf7","#51cf66","#ffd43b","#cc5de8","#ff922b","#20c997","#f783ac"];
 const UPS=[{k:"tank",i:"🛡️",c:"#4dabf7",n:"Tank",d:"+50 health, but a bigger blob",f:s=>{s.hp+=50;s.r*=1.25}},{k:"glass",i:"💎",c:"#ff6b6b",n:"Glass cannon",d:"1 less bullet, +70% damage",f:s=>{s.ammo=Math.max(1,s.ammo-1);s.dmg*=1.7}},{k:"rico",i:"🔁",c:"#fcc419",n:"Ricochet",d:"Bullets bounce off walls twice",f:s=>{s.bn+=2}},{k:"pois",i:"☠️",c:"#51cf66",n:"Poison",d:"Bullets poison for 3 seconds",f:s=>{s.pois+=1}},{k:"fast",i:"👟",c:"#20c997",n:"Quick feet",d:"+25% move speed",f:s=>{s.spd*=1.25}},{k:"mag",i:"🎒",c:"#ff922b",n:"Big mag",d:"+3 bullets, −20% damage",f:s=>{s.ammo+=3;s.dmg*=.8}},{k:"rel",i:"✋",c:"#845ef7",n:"Fast hands",d:"Reload 40% faster, shoot quicker",f:s=>{s.rel*=.6;s.cd*=.7}},{k:"heavy",i:"🔨",c:"#868e96",n:"Heavy rounds",d:"Bigger, slower bullets, +30% damage",f:s=>{s.br*=1.5;s.bs*=.8;s.dmg*=1.3}},{k:"vamp",i:"🧛",c:"#e64980",n:"Vampire",d:"Heal 40% of damage you deal",f:s=>{s.vamp+=.4}},
 {k:"dash1",i:"💨",c:"#15aabf",n:"Quick dash",d:"Dash cooldown −30%",f:s=>{s.dcd*=.7}},{k:"dash2",i:"🏃",c:"#15aabf",n:"Long dash",d:"Dash goes 40% further",f:s=>{s.dd*=1.4}},{k:"dash3",i:"👻",c:"#15aabf",n:"Ghost dash",d:"You can’t be hit while dashing",f:s=>{s.ghost=1}},{k:"snipe",i:"🎯",c:"#f03e3e",n:"Sniper",d:"+40% bullet speed, +25% damage, slower fire",f:s=>{s.bs*=1.4;s.dmg*=1.25;s.cd*=1.3}},{k:"scat",i:"🔱",c:"#f76707",n:"Scatter shot",d:"3 bullets per shot, 60% damage each",f:s=>{s.multi+=2;s.dmg*=.6}},{k:"armor",i:"🧱",c:"#4c6ef5",n:"Armor",d:"Take 20% less damage",f:s=>{s.armor=Math.min(.6,s.armor+.2)}},{k:"regen",i:"💚",c:"#37b24d",n:"Regeneration",d:"Heal 3 health every second",f:s=>{s.regen+=3}},{k:"pierce",i:"🗡️",c:"#adb5bd",n:"Piercing",d:"Bullets pass through players",f:s=>{s.pierce=1}},{k:"tiny",i:"🐭",c:"#be4bdb",n:"Tiny blob",d:"Smaller, +10% speed, −20 health",f:s=>{s.r*=.75;s.spd*=1.1;s.hp=Math.max(40,s.hp-20)}},{k:"mach",i:"🔫",c:"#fd7e14",n:"Machine blob",d:"+2 bullets, shoot twice as fast, −25% damage",f:s=>{s.ammo+=2;s.cd*=.5;s.dmg*=.75}},{k:"open",i:"🎁",c:"#e8590c",n:"Opening shot",d:"First shot after a reload does double damage",f:s=>{s.oc=1}},{k:"jug",i:"🦏",c:"#5c7cfa",n:"Juggernaut",d:"+80 health, −20% move speed",f:s=>{s.hp+=80;s.spd*=.8}}];
@@ -312,7 +324,7 @@ function shotStart(sh){shotStop();const ps=S.players.filter(p=>sh.teams[p.id]!=n
  G.tm=(f,ms)=>G.timers.push(setTimeout(()=>{if(G)f()},ms));
  ps.forEach(p=>G.P[p.id]={id:p.id,name:p.name,color:sh.colors[p.id],team:sh.teams[p.id],st:baseStats(),x:300,y:300,tx:300,ty:300,a:0,hp:100,alive:true,ammo:3,rt:0,cd:0,pd:0,pt:0});
  G.ids=Object.keys(G.P).sort((a,b)=>G.P[a].team-G.P[b].team||(a<b?-1:1));
- const d=document.createElement("div");d.id="shot";d.innerHTML=`<div id="sh-top"></div><div id="sh-box"><canvas id="sh-cv" width="900" height="900"></canvas><div id="sh-btns"><button id="sh-rl" onpointerdown="G&&(G.rq=true)">⟳ Reload [R]</button><button id="sh-dash" onpointerdown="G&&(G.dq=true)">💨 Dash [Space]</button></div><div id="sh-ov"></div></div><div class="mute" style="margin-top:10px;text-align:center">WASD move · mouse aims &amp; shoots · R reload · Space dash · touch: left side moves, right side aims <button class="ghost sm" onclick="shotLeave()">Leave match</button></div>`;document.body.appendChild(d);
+ const d=document.createElement("div");d.id="shot";d.innerHTML=`<div id="sh-top"></div><div id="sh-box"><canvas id="sh-cv" width="900" height="900"></canvas><div id="sh-btns"><button id="sh-rl" onpointerdown="G&&(G.rq=true)">⟳ Reload [R]</button><button id="sh-dash" onpointerdown="G&&(G.dq=true)">💨 Dash [Space]</button></div><div id="sh-ov"></div></div><div style="margin-top:8px;display:flex;gap:6px;justify-content:center">${["😂","🇹🇼","🫃","🇮🇱","🪬"].map(e=>`<button class="ghost sm" style="margin:0;font-size:20px" onclick="shotReact('${e}')">${e}</button>`).join("")}</div><div class="mute" style="margin-top:8px;text-align:center">WASD move · mouse aims &amp; shoots · R reload · Space dash · touch: left side moves, right side aims <button class="ghost sm" onclick="shotLeave()">Leave match</button></div>`;document.body.appendChild(d);
  const c=$("#sh-cv"),pos=e=>{const b=c.getBoundingClientRect();return[(e.clientX-b.left)/b.width*600,(e.clientY-b.top)/b.height*600]},cl=v=>Math.max(-1,Math.min(1,v));
  c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);const p=pos(e);if(e.pointerType==="touch"&&p[0]<300){G.js={id:e.pointerId,ox:p[0],oy:p[1]};G.jx=G.jy=0}else{G.mx=p[0];G.my=p[1];G.md=true;G.aid=e.pointerId}};
  c.onpointermove=e=>{const p=pos(e);if(G.js&&e.pointerId===G.js.id){G.jx=cl((p[0]-G.js.ox)/40);G.jy=cl((p[1]-G.js.oy)/40)}else{G.mx=p[0];G.my=p[1]}};
@@ -342,6 +354,7 @@ function handle(f,m){if(!G)return;const P=G.P,me=P[S.uid];
  switch(m.t){
  case"s":{const p=P[f];if(p){p.tx=m.x;p.ty=m.y;p.a=m.a;p.hp=m.hp;p.ammo=m.am}break}
  case"b":G.B.push({...m.b,life:2.5});if(P[m.b.o])P[m.b.o].rv=performance.now()+700;beep(300,.05,"square",.03);break;
+ case"r":if(P[f])P[f].rx={e:m.e,t:performance.now()};break;
  case"bx":explodeBarrel(m.id);break;
  case"x":G.B=G.B.filter(b=>b.id!==m.id);break;
  case"hit":if(m.by===S.uid&&me.st.vamp)me.hp=Math.min(me.st.hp,me.hp+m.dmg*me.st.vamp);break;
@@ -400,7 +413,7 @@ function draw(t){const c=$("#sh-cv");if(!c)return;const x=c.getContext("2d"),me=
  x.fillStyle="#8d8499";x.lineWidth=2;G.walls.forEach(([a,b,w,h])=>{x.fillRect(a,b,w,h);x.strokeRect(a,b,w,h)});
  G.barrels.forEach(b=>{if(!b.alive)return;x.fillStyle="#e03131";x.strokeStyle="#1d1b20";x.lineWidth=3;x.beginPath();x.arc(b.x,b.y,14,0,7);x.fill();x.stroke();x.fillStyle="#ffd43b";x.fillRect(b.x-12,b.y-3,24,6);x.fillStyle="#1d1b20";x.font="bold 10px sans-serif";x.textAlign="center";x.fillText("!",b.x,b.y+3.5)});
  G.B.forEach(b=>{const o=G.P[b.o];x.fillStyle=o?o.color:"#fff";x.strokeStyle=b.pois?"#69db7c":"#111";x.lineWidth=2;x.beginPath();x.arc(b.x,b.y,b.r,0,7);x.fill();x.stroke()});
- G.ids.forEach((id,i)=>{const p=G.P[id];if(!(p===me||p.team===me.team||!inB(p)||Math.hypot(p.x-me.x,p.y-me.y)<110||(p.rv||0)>performance.now()))return;
+ G.ids.forEach((id,i)=>{const p=G.P[id];p.vis=p===me||p.team===me.team||!inB(p)||Math.hypot(p.x-me.x,p.y-me.y)<110||(p.rv||0)>performance.now();if(!p.vis)return;
   const r=p.st.r,ex=Math.cos(p.a),ey=Math.sin(p.a),w=.05*Math.sin(t/160+i*2);x.globalAlpha=p.alive?(p.dashT>0?.5:1):.22;
   x.strokeStyle="#222";x.lineWidth=5;x.lineCap="round";x.beginPath();x.moveTo(p.x+ex*r*.5,p.y+ey*r*.5);x.lineTo(p.x+ex*(r+9),p.y+ey*(r+9));x.stroke();
   x.fillStyle=p.color;x.strokeStyle=p.pt>0?"#69db7c":"#1d1b20";x.lineWidth=3;x.beginPath();x.ellipse(p.x,p.y,r*(1+w),r*(1-w),0,0,7);x.fill();x.stroke();
@@ -408,6 +421,7 @@ function draw(t){const c=$("#sh-cv");if(!c)return;const x=c.getContext("2d"),me=
   if(p.alive){const q=Math.max(0,p.hp/p.st.hp);x.fillStyle="#000a";x.fillRect(p.x-18,p.y-r-13,36,5);x.fillStyle=q>.35?"#51cf66":"#ff6b6b";x.fillRect(p.x-18,p.y-r-13,36*q,5);x.fillStyle="#fff";x.font="bold 10px sans-serif";x.textAlign="center";x.fillText(p.name,p.x,p.y-r-17);x.fillStyle="#ffd43b";for(let k=0;k<p.ammo;k++){x.beginPath();x.arc(p.x-(p.ammo-1)*3+k*6,p.y+r+8,2.2,0,7);x.fill()}}
   x.globalAlpha=1});
  x.fillStyle=meIn?"rgba(30,120,50,.45)":"rgba(47,158,68,.62)";x.strokeStyle="rgba(24,100,40,.95)";x.lineWidth=2;G.bushes.forEach(([a,b,w,h])=>{x.fillRect(a,b,w,h);x.strokeRect(a,b,w,h)});
+ G.ids.forEach(id=>{const p=G.P[id];if(!p.vis||!p.rx)return;const age=t-p.rx.t;if(age>2600){p.rx=null;return}const sc=Math.min(1,age/150);x.save();x.globalAlpha=age>2100?Math.max(0,1-(age-2100)/500):1;x.translate(p.x,p.y-p.st.r-46);x.scale(sc,sc);x.fillStyle="#fff";x.strokeStyle="#1d1b20";x.lineWidth=2.5;x.beginPath();x.moveTo(-5,14);x.lineTo(0,23);x.lineTo(5,14);x.closePath();x.fill();x.stroke();x.beginPath();x.rect(-19,-15,38,30);x.fill();x.stroke();x.font="20px sans-serif";x.textAlign="center";x.textBaseline="middle";x.fillStyle="#000";x.fillText(p.rx.e,0,1);x.restore()});
  G.fx.forEach(f=>{const k=(t-f.t)/450;x.fillStyle=`rgba(255,160,40,${.6*(1-k)})`;x.beginPath();x.arc(f.x,f.y,EXR*Math.min(1,k*1.4),0,7);x.fill()});
  x.setTransform(1.5,0,0,1.5,0,0);
  if(meIn){const px=me.x-G.cx,py=me.y-G.cy,g=x.createRadialGradient(px,py,80,px,py,190);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,.93)");x.fillStyle=g;x.fillRect(0,0,600,600)}
@@ -417,6 +431,18 @@ function draw(t){const c=$("#sh-cv");if(!c)return;const x=c.getContext("2d"),me=
 function startLoop(){G.raf=requestAnimationFrame(rafLoop);const tickHidden=()=>{if(G&&document.hidden)shotFrame(performance.now())};try{G.wk=new Worker(URL.createObjectURL(new Blob(["setInterval(()=>postMessage(1),30)"],{type:"text/javascript"})));G.wk.onmessage=tickHidden}catch(e){G.iv=setInterval(tickHidden,100)}}
 function rafLoop(){if(!G)return;shotFrame(performance.now());if(G)G.raf=requestAnimationFrame(rafLoop)}
 function shotFrame(t){const dt=Math.min(2,Math.max(0,(t-G.t)/1000));G.t=t;try{const n=Math.max(1,Math.ceil(dt*60));for(let i=0;i<n&&G;i++)step(t,dt/n);if(G&&!document.hidden)draw(t)}catch(e){console.error(e)}}
+S.egg=ls.get("egg")==="1";
+function shotReact(e){const t=Date.now();if(!G||t-(G.rlast||0)<500)return;G.rlast=t;emit({t:"r",e})}
+function eggUnlock(){S.egg=true;ls.set("egg","1");chord([392,523,659,784])}
+let EGG=null;
+function eggStart(){if(EGG)return;const o=document.createElement("div");o.id="egg";o.innerHTML=`<div class="ch"></div><div class="tb"><span id="eg-t"></span><i>▼</i></div>`;document.body.appendChild(o);
+ const ch=o.querySelector(".ch"),tb=o.querySelector(".tb");try{ch.style.backgroundImage=getComputedStyle(document.body,"::after").backgroundImage}catch(e){}
+ EGG={o,step:0,typing:false};requestAnimationFrame(()=>requestAnimationFrame(()=>o.classList.add("on")));
+ EGG.t1=setTimeout(()=>ch.classList.add("show"),1000);EGG.t2=setTimeout(()=>{tb.classList.add("show");eggSay("* I am Mongrel, Blade of Burger...")},2300);tb.onclick=eggNext}
+function eggSay(t){const el=$("#eg-t");EGG.full=t;EGG.i=0;EGG.typing=true;el.textContent="";clearInterval(EGG.iv);EGG.iv=setInterval(()=>{if(!EGG)return;EGG.i++;el.textContent=t.slice(0,EGG.i);const c=t[EGG.i-1];if(c&&c!==" "&&c!=="*")beep(500+Math.random()*70,.05,"square",.045);if(EGG.i>=t.length){clearInterval(EGG.iv);eggDone()}},45)}
+function eggDone(){EGG.typing=false;if(EGG.step===1&&!EGG.to)EGG.to=setTimeout(eggEnd,2500)}
+function eggNext(){if(!EGG||!EGG.full)return;if(EGG.typing){clearInterval(EGG.iv);$("#eg-t").textContent=EGG.full;eggDone();return}if(EGG.step===0){EGG.step=1;eggSay("* And I have never known defeat.")}else eggEnd()}
+function eggEnd(){if(!EGG)return;const o=EGG.o;clearInterval(EGG.iv);clearTimeout(EGG.to);clearTimeout(EGG.t1);clearTimeout(EGG.t2);o.classList.remove("on");setTimeout(()=>o.remove(),700);EGG=null}
 function home(){return `<h1>Mongrel Games</h1><p class="sub">${GN[S.game]||GN.imp} · <a class="lnk" onclick="S.page='games';render()">all games</a></p>
 <div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
@@ -424,7 +450,7 @@ ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
 ${S.game&&S.game!=="imp"?"":`<button class="ghost" style="width:100%" onclick="S.page=S.admin?'manage':'login';S.err='';render()">Manage categories &amp; words</button>`}`}
 
 function login(){return `<button class="ghost sm" onclick="S.page='home';S.err='';render()">← Back</button><h1>Admin</h1><p class="sub">Enter the password to manage categories and words.</p><div class="card"><input id="pw" type="password" placeholder="Password" autocomplete="off"><button style="width:100%" onclick="unlock()">Unlock</button></div>${S.err?`<p class="err">${esc(S.err)}</p>`:""}`}
-function unlock(){if($("#pw").value==="AdminMongrel"){S.admin=true;S.err="";S.drafts={};S.page="manage"}else S.err="Wrong password.";render()}
+function unlock(){if($("#pw").value==="AdminMongrel"){S.admin=true;S.err="";S.drafts={};S.page="manage"}else{if($("#pw").value==="Burger")eggUnlock();S.err="Wrong password."}render()}
 function manage(){const cs=cats();
  return `<button class="ghost sm" onclick="S.page='home';S.err='';render()">← Back</button><h1>Categories &amp; words</h1><p class="sub">Shared with everyone who uses this site.</p>
 <div class="card"><h2>New category</h2><input id="nc" placeholder="Category name"><textarea id="nw" rows="3" placeholder="Words, separated by commas (optional hint: word=hint)"></textarea><button style="width:100%" onclick="saveCat($('#nc').value,$('#nw').value)">Save category</button></div>
