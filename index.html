@@ -99,6 +99,18 @@ main{padding-bottom:90px}
 #egg .tb{position:absolute;bottom:4vh;left:50%;transform:translateX(-50%);width:min(760px,92vw);min-height:150px;box-sizing:border-box;border:6px solid #fff;background:#000;color:#fff;padding:18px 24px;font:28px/1.35 "Determination Mono","Courier New",monospace;cursor:pointer;opacity:0;transition:opacity .3s;user-select:none}
 #egg .tb.show{opacity:1}#egg .tb i{position:absolute;right:16px;bottom:8px;font-style:normal;font-size:20px;animation:blink .8s steps(1) infinite}@keyframes blink{50%{opacity:0}}
 </style>
+<style>
+#shot{touch-action:none}
+.stk{display:none;position:fixed;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.35);touch-action:none;z-index:25}
+.stk i{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:rgba(255,255,255,.55);pointer-events:none}
+.stk.act{background:rgba(255,255,255,.22)}
+#stkL{left:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}#stkR{right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
+@media (pointer:coarse){.stk{display:block}
+ #sh-box{width:min(94vw,calc(100dvh - 90px));margin-top:34px}
+ #sh-btns{position:fixed;left:auto;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 176px);flex-direction:column;gap:10px;align-items:flex-end}
+ #sh-btns button{min-width:90px;padding:14px 12px;font-size:16px;border-radius:50px}#sh-help{display:none}}
+@media (pointer:coarse) and (orientation:landscape){#sh-react{display:none}}
+</style>
 </head>
 <body><button id="mute" onclick="toggleMute()" aria-label="Toggle sound">🔊</button><div id="eggR" onclick="eggStart()"></div><div id="rx"></div><div id="rwrap"><button class="ghost" onclick="sendReact('😂')" aria-label="Laugh">😂</button><button class="ghost" onclick="sendReact('🇹🇼')" aria-label="Taiwan flag">🇹🇼</button><button class="ghost" onclick="sendReact('🫃')" aria-label="Pregnant man">🫃</button><button class="ghost" onclick="sendReact('🇮🇱')" aria-label="Israel flag">🇮🇱</button><button class="ghost" onclick="sendReact('🪬')" aria-label="Hamsa">🪬</button></div><main id="app"><p class="sub">Loading…</p></main>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -329,11 +341,14 @@ function shotStart(sh){shotStop();const ps=S.players.filter(p=>sh.teams[p.id]!=n
  G.tm=(f,ms)=>G.timers.push(setTimeout(()=>{if(G)f()},ms));
  ps.forEach(p=>G.P[p.id]={id:p.id,name:p.name,color:sh.colors[p.id],team:sh.teams[p.id],st:baseStats(),x:300,y:300,tx:300,ty:300,a:0,hp:100,alive:true,ammo:3,rt:0,cd:0,pd:0,pt:0});
  G.ids=Object.keys(G.P).sort((a,b)=>G.P[a].team-G.P[b].team||(a<b?-1:1));
- const d=document.createElement("div");d.id="shot";d.innerHTML=`<div id="sh-top"></div><div id="sh-box"><canvas id="sh-cv" width="900" height="900"></canvas><div id="sh-btns"><button id="sh-rl" onpointerdown="G&&(G.rq=true)">⟳ Reload [R]</button><button id="sh-dash" onpointerdown="G&&(G.dq=true)">💨 Dash [Space]</button></div><div id="sh-ov"></div></div><div style="margin-top:8px;display:flex;gap:6px;justify-content:center">${["😂","🇹🇼","🫃","🇮🇱","🪬"].map(e=>`<button class="ghost sm" style="margin:0;font-size:20px" onclick="shotReact('${e}')">${e}</button>`).join("")}</div><div class="mute" style="margin-top:8px;text-align:center">WASD move · mouse aims &amp; shoots · R reload · Space dash · touch: left side moves, right side aims ${isH()&&sh.gm==="mayhem"?`<button class="ghost sm" onclick="shotEnd()">End match</button> `:""}<button class="ghost sm" onclick="shotLeave()">Leave match</button></div>`;document.body.appendChild(d);
+ const d=document.createElement("div");d.id="shot";d.innerHTML=`<div id="sh-top"></div><div id="sh-box"><canvas id="sh-cv" width="900" height="900"></canvas><div id="sh-btns"><button id="sh-rl" onpointerdown="G&&(G.rq=true)">⟳ Reload [R]</button><button id="sh-dash" onpointerdown="G&&(G.dq=true)">💨 Dash [Space]</button></div><div id="sh-ov"></div></div><div id="sh-react" style="margin-top:8px;display:flex;gap:6px;justify-content:center">${["😂","🇹🇼","🫃","🇮🇱","🪬"].map(e=>`<button class="ghost sm" style="margin:0;font-size:20px" onclick="shotReact('${e}')">${e}</button>`).join("")}</div><div class="mute" style="margin-top:8px;text-align:center"><span id="sh-help">WASD move · mouse aims &amp; shoots · R reload · Space dash</span> ${isH()&&sh.gm==="mayhem"?`<button class="ghost sm" onclick="shotEnd()">End match</button> `:""}<button class="ghost sm" onclick="shotLeave()">Leave match</button></div>`;document.body.appendChild(d);
  const c=$("#sh-cv"),pos=e=>{const b=c.getBoundingClientRect();return[(e.clientX-b.left)/b.width*600,(e.clientY-b.top)/b.height*600]},cl=v=>Math.max(-1,Math.min(1,v));
- c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);const p=pos(e);if(e.pointerType==="touch"&&p[0]<300){G.js={id:e.pointerId,ox:p[0],oy:p[1]};G.jx=G.jy=0}else{G.mx=p[0];G.my=p[1];G.md=true;G.aid=e.pointerId}};
- c.onpointermove=e=>{const p=pos(e);if(G.js&&e.pointerId===G.js.id){G.jx=cl((p[0]-G.js.ox)/40);G.jy=cl((p[1]-G.js.oy)/40)}else{G.mx=p[0];G.my=p[1]}};
+ c.onpointerdown=e=>{if(e.pointerType==="touch")return;c.setPointerCapture(e.pointerId);const p=pos(e);if(e.pointerType==="touch"&&p[0]<300){G.js={id:e.pointerId,ox:p[0],oy:p[1]};G.jx=G.jy=0}else{G.mx=p[0];G.my=p[1];G.md=true;G.aid=e.pointerId}};
+ c.onpointermove=e=>{if(e.pointerType==="touch")return;const p=pos(e);if(G.js&&e.pointerId===G.js.id){G.jx=cl((p[0]-G.js.ox)/40);G.jy=cl((p[1]-G.js.oy)/40)}else{G.mx=p[0];G.my=p[1]}};
  c.onpointerup=c.onpointercancel=e=>{if(G.js&&e.pointerId===G.js.id){G.js=null;G.jx=G.jy=0}else if(e.pointerId===G.aid)G.md=false};
+ d.insertAdjacentHTML("beforeend",`<div class="stk" id="stkL"><i></i></div><div class="stk" id="stkR"><i></i></div>`);
+ mkStick($("#stkL"),(x,y)=>{const z=Math.hypot(x,y)<.12;G.jx=z?0:x;G.jy=z?0:y});
+ mkStick($("#stkR"),(x,y,on)=>{if(on){G.ar=1;G.ax=x;G.ay=y;G.md=Math.hypot(x,y)>.25}else G.md=false});
  document.addEventListener("keydown",kd);document.addEventListener("keyup",ku);
  topBar();uiRefresh();netInit();startLoop()}
 function shotStop(){if(!G)return;cancelAnimationFrame(G.raf);clearInterval(G.chk);clearInterval(G.iv);if(G.wk)G.wk.terminate();if(G.net){try{G.net.hi.off();G.net.ev.off();G.net.st.off();G.net.hi.child(S.uid).remove();if(isH())G.net.base.remove()}catch(e){}}G.timers.forEach(clearTimeout);if(G.unsub)G.unsub();Object.values(G.peers).forEach(p=>{try{p.pc.close()}catch(e){}});document.removeEventListener("keydown",kd);document.removeEventListener("keyup",ku);const d=$("#shot");if(d)d.remove();G=null;render()}
@@ -342,14 +357,15 @@ function shotLeave(){shotStop();leave()}
 function netInit(){const me=S.uid,quiet=()=>{};let rdb;
  try{rdb=firebase.database()}catch(e){G.msg="Realtime Database isn’t set up yet (see the setup steps: databaseURL).";uiRefresh();return}
  const base=rdb.ref(`net/${S.code}/${G.gid}`);G.net={base,ev:base.child("ev"),st:base.child("st"),hi:base.child("hi")};G.hello={};
- const my=G.net.hi.child(me);try{my.onDisconnect().remove()}catch(e){}my.set(true).catch(quiet);
- G.net.hi.on("child_added",x=>{if(G)G.hello[x.key]=1});
+ const my=G.net.hi.child(me);try{my.onDisconnect().remove()}catch(e){}my.set(BUILD).catch(quiet);
+ G.net.hi.on("child_added",x=>{if(G)G.hello[x.key]=x.val()||1});
  G.net.hi.on("child_removed",x=>{if(!G)return;delete G.hello[x.key];if(G.phase!=="over")peerGone(x.key)});
  G.net.ev.on("child_added",x=>{const v=x.val();if(G&&v&&v.f!==me)try{handle(v.f,v.m)}catch(e){console.error(e)}});
  const stIn=x=>{const v=x.val();if(G&&v&&x.key!==me)handle(x.key,v)};G.net.st.on("child_added",stIn);G.net.st.on("child_changed",stIn);
- G.chk=setInterval(()=>{if(!G||G.phase!=="wait")return;const oth=G.ids.filter(o=>o!==me);
-  G.msg="Connecting players…<br><span style='font-size:14px;font-weight:400'>"+oth.map(o=>esc(G.P[o].name)+": "+(G.hello[o]?"connected ✓":"waiting for them")).join(" · ")+"</span>";uiRefresh();
-  if(!isH())return;if(oth.every(o=>G.hello[o]))emit({t:"pk",ids:G.ids});else if(performance.now()-G.t0>40000){alert("Not everyone connected. Make sure everyone has refreshed the page, and that the Realtime Database is set up. Going back to the lobby.");S.db.doc("rooms/"+S.code).update({phase:"lobby",shot:null}).catch(quiet)}},500)}
+ G.chk=setInterval(()=>{if(!G||G.phase!=="wait")return;const oth=G.ids.filter(o=>o!==me),bad=oth.filter(o=>G.hello[o]&&G.hello[o]!==BUILD);
+  G.msg="Connecting players…<br><span style='font-size:14px;font-weight:400'>"+oth.map(o=>esc(G.P[o].name)+": "+(!G.hello[o]?"waiting for them":bad.includes(o)?"⚠ different version":"connected ✓")).join(" · ")+"</span>"+(bad.length?"<br><span style='font-size:14px;font-weight:400;color:#ffd43b'>Different versions of the site are open. Everyone press Ctrl+Shift+R (hard refresh), then the host starts again.</span>":"");uiRefresh();
+  if(!isH())return;if(bad.length){if(performance.now()-G.t0>25000){alert("Some players are on a different version of the site. Everyone needs to hard refresh (Ctrl+Shift+R), then start again.");S.db.doc("rooms/"+S.code).update({phase:"lobby",shot:null}).catch(quiet)}return}
+  if(oth.every(o=>G.hello[o]))emit({t:"pk",ids:G.ids});else if(performance.now()-G.t0>40000){alert("Not everyone connected. Make sure everyone has refreshed the page, and that the Realtime Database is set up. Going back to the lobby.");S.db.doc("rooms/"+S.code).update({phase:"lobby",shot:null}).catch(quiet)}},500)}
 function peerGone(o){if(!G||!G.P[o])return;G.P[o].gone=true;if(G.P[o].alive)handle(S.uid,{t:"k",id:o});if(isH()&&G.phase==="pick")checkPicks()}
 const send=m=>{if(!G||!G.net)return;try{if(m.t==="s")G.net.st.child(S.uid).set(m);else G.net.ev.push({f:S.uid,m})}catch(e){}};
 const emit=m=>{send(m);handle(S.uid,m)};
@@ -357,7 +373,7 @@ const emit=m=>{send(m);handle(S.uid,m)};
 const names=t=>{const a=G.ids.filter(i=>G.P[i].team===t).map(i=>esc(G.P[i].name));return a.join(" & ")+(a.length>1?" win":" wins")};
 function handle(f,m){if(!G)return;const P=G.P,me=P[S.uid];
  switch(m.t){
- case"s":{const p=P[f];if(p){p.tx=m.x;p.ty=m.y;p.a=m.a;p.hp=m.hp;p.ammo=m.am}break}
+ case"s":{const p=P[f];if(p){p.tx=m.x;p.ty=m.y;p.a=m.a;p.hp=m.hp;p.ammo=m.am;(p.buf=p.buf||[]).push({t:performance.now(),x:m.x,y:m.y});if(p.buf.length>14)p.buf.shift()}break}
  case"b":G.B.push({...m.b,life:2.5});if(P[m.b.o])P[m.b.o].rv=performance.now()+700;beep(300,.05,"square",.03);break;
  case"r":if(P[f])P[f].rx={e:m.e,t:performance.now()};break;
  case"bx":explodeBarrel(m.id,m.by);break;
@@ -365,7 +381,7 @@ function handle(f,m){if(!G)return;const P=G.P,me=P[S.uid];
  case"hit":if(m.by===S.uid&&me.st.vamp)me.hp=Math.min(me.st.hp,me.hp+m.dmg*me.st.vamp);break;
  case"k":{const p=P[m.id];if(p&&p.alive){p.alive=false;p.hp=0;beep(150,.3,"sawtooth",.07);
   if(G.gm==="mayhem"){const kp=P[m.by];if(kp&&m.by!==m.id){G.scores[kp.team]++;topBar()}if(m.id===S.uid){G.respAt=performance.now()+3000;beginPick()}}else if(isH())checkEnd()}break}
- case"rp":{const p=P[m.id];if(p){p.alive=true;p.hp=p.st.hp;p.ammo=p.st.ammo;p.rt=0;p.cd=0;p.pt=0;p.dcd=0;p.dashT=0;p.kvx=p.kvy=0;p.x=p.tx=m.x;p.y=p.ty=m.y;p.inv=performance.now()+1500}break}
+ case"rp":{const p=P[m.id];if(p){p.alive=true;p.hp=p.st.hp;p.ammo=p.st.ammo;p.rt=0;p.cd=0;p.pt=0;p.dcd=0;p.dashT=0;p.kvx=p.kvy=0;p.x=p.tx=m.x;p.y=p.ty=m.y;p.buf=[];p.inv=performance.now()+1500}break}
  case"u":{const p=P[m.id],u=UPS.find(x=>x.k===m.k);if(p&&u){u.f(p.st);(p.up=p.up||[]).push(m.k)}break}
  case"pd":G.picked[m.id]=1;if(isH())checkPicks();break;
  case"pk":G.phase="pick";G.pickIds=m.ids;G.picked={};G.rsSent=0;if(m.ids.includes(S.uid))beginPick();break;
@@ -383,7 +399,7 @@ function pickUp(k){const pk=G.pick;if(!pk)return;emit({t:"u",id:S.uid,k});pk.lef
 const die=me=>emit({t:"k",id:S.uid,by:me.lb&&performance.now()-me.lb.t<8000?me.lb.id:null});
 function respawn(me){const en=Object.values(G.P).filter(p=>p.alive&&p!==me);let best=SPTS[0],bd=-1;SPTS.forEach(sp=>{const d=en.length?Math.min(...en.map(p=>Math.hypot(p.x-sp[0],p.y-sp[1]))):999;if(d>bd){bd=d;best=sp}});emit({t:"rp",id:S.uid,x:best[0],y:best[1]})}
 function shotEnd(){if(!G||!isH()||G.gm!=="mayhem"||G.phase==="over")return;const sc=G.scores,mx=Math.max(...sc),w=mx>0?sc.indexOf(mx):-1;emit({t:"mo",w,sc});matchOver(w)}
-function shotRound(m){const mp=SMAPS[m.m];G.round=m.n;G.walls=mp.w;G.bushes=mp.bu;G.pads=mp.pd||[];G.spikes=mp.sp||[];G.barrels=mp.b.map((p,i)=>({id:i,x:p[0],y:p[1],alive:true}));G.fx=[];G.mapName=mp.n;G.B=[];G.respAt=0;const sp=SPAWNS[G.gm==="mayhem"?"2v2":G.mode];G.ids.forEach((id,i)=>{const p=G.P[id],st=p.st;p.x=p.tx=sp[i][0];p.y=p.ty=sp[i][1];p.hp=st.hp;p.alive=true;p.ammo=st.ammo;p.rt=0;p.cd=0;p.pt=0;p.dcd=0;p.dashT=0;p.kvx=p.kvy=0;p.boost=0;p.inv=0;p.a=sp[i][0]<500?0:Math.PI});G.phase="count";G.cdEnd=performance.now()+2200;topBar()}
+function shotRound(m){const mp=SMAPS[m.m]||SMAPS[0];G.round=m.n;G.walls=mp.w;G.bushes=mp.bu;G.pads=mp.pd||[];G.spikes=mp.sp||[];G.barrels=mp.b.map((p,i)=>({id:i,x:p[0],y:p[1],alive:true}));G.fx=[];G.mapName=mp.n;G.B=[];G.respAt=0;const sp=SPAWNS[G.gm==="mayhem"?"2v2":G.mode];G.ids.forEach((id,i)=>{const p=G.P[id],st=p.st;p.x=p.tx=sp[i][0];p.y=p.ty=sp[i][1];p.hp=st.hp;p.alive=true;p.ammo=st.ammo;p.rt=0;p.cd=0;p.pt=0;p.dcd=0;p.dashT=0;p.kvx=p.kvy=0;p.boost=0;p.inv=0;p.buf=[];p.a=sp[i][0]<500?0:Math.PI});G.phase="count";G.cdEnd=performance.now()+2200;topBar()}
 function topBar(){const el=$("#sh-top");if(!el)return;const T={};G.ids.forEach(id=>{const p=G.P[id];(T[p.team]=T[p.team]||[]).push(p)});el.innerHTML=Object.keys(T).map(k=>`<div class="sc">${T[k].map(p=>`<i style="background:${p.color}"></i>${esc(p.name)}`).join(" ")}<b>${G.scores[k]}</b></div>`).join("")+`<div class="sc" style="box-shadow:none;font-weight:600">${G.gm==="mayhem"?"Infinite Mayhem":"First to 5"}${G.mapName?" · "+G.mapName:""}</div>`}
 function uiRefresh(){const o=$("#sh-ov");if(!o)return;let h="",bg="transparent";
  if(G.pick){bg="#000c";const up=G.P[S.uid].up||[],tot=G.cpick||1,n=tot-G.pick.left+1;h=`<b style="font-size:22px">Choose an upgrade${tot>1?` (${n} of ${tot})`:""}</b><div style="color:#fff;opacity:.85">Auto-picks the middle card in <b id="pk-t">${Math.ceil(PICKT/1000)}</b>s</div><div class="cards">${G.pick.cards.map((k,i)=>{const u=UPS.find(x=>x.k===k);return`<button class="ucard" style="--cc:${u.c}" onclick="pickUp('${k}')"><span class="ic">${u.i}</span><span><b>${u.n}</b><small>${u.d}</small><small style="opacity:.55">press ${i+1}</small></span></button>`}).join("")}</div>${up.length?`<div style="opacity:.85">Your upgrades: ${up.map(k=>UPS.find(x=>x.k===k).i).join(" ")}</div>`:""}`}
@@ -413,14 +429,14 @@ function step(t,dt){const me=G.P[S.uid],K=G.keys,st=me.st,W=G.W;if(G.phase==="co
   pushOut(me,st.r);
   if(G.pads.some(([a,b,w,h])=>me.x>a&&me.x<a+w&&me.y>b&&me.y<b+h)){if(!(me.boost>2.7))beep(820,.07,"triangle",.04);me.boost=3}
   if(me.spk<=0&&G.spikes.some(([a,b,w,h])=>me.x>a&&me.x<a+w&&me.y>b&&me.y<b+h)&&!(me.dashT>0&&st.ghost)){me.spk=.6;me.hp-=12*(1-st.armor);beep(200,.1,"sawtooth",.06);if(me.hp<=0)die(me)}
-  me.a=Math.atan2(G.my+G.cy-me.y,G.mx+G.cx-me.x);
+  if(G.ar)me.a=Math.atan2(G.ay,G.ax);else me.a=Math.atan2(G.my+G.cy-me.y,G.mx+G.cx-me.x);
   if(G.rq){G.rq=false;if(me.ammo<st.ammo&&me.rt<=0)me.rt=st.rel}
   me.cd-=dt;if(me.ammo<=0&&me.rt<=0)me.rt=st.rel;if(me.rt>0){me.rt-=dt;if(me.rt<=0){me.ammo=st.ammo;me.rt=0}}
   if(G.md&&me.ammo>0&&me.cd<=0&&me.rt<=0&&!G.pick)fire(me);
   if(st.regen&&me.hp<st.hp)me.hp=Math.min(st.hp,me.hp+st.regen*dt);
   if(me.pt>0){me.pt-=dt;me.hp-=me.pd*dt;if(me.hp<=0)die(me)}
   if(t-G.ls>50){G.ls=t;send({t:"s",x:+me.x.toFixed(1),y:+me.y.toFixed(1),a:+me.a.toFixed(2),hp:Math.round(me.hp),am:me.ammo})}}else{G.dq=G.rq=false}
- G.ids.forEach(id=>{if(id===S.uid)return;const p=G.P[id],k=Math.min(1,dt*14);p.x+=(p.tx-p.x)*k;p.y+=(p.ty-p.y)*k});
+ G.ids.forEach(id=>{if(id===S.uid)return;const p=G.P[id];if(p.buf&&p.buf.length)interp(p,t);else{const k=Math.min(1,dt*14);p.x+=(p.tx-p.x)*k;p.y+=(p.ty-p.y)*k}});
  if(G.phase==="pick")G.B=[];
  G.B=G.B.filter(b=>{b.life-=dt;if(b.life<=0)return false;b.x+=b.vx*dt;b.y+=b.vy*dt;
   for(const[a,c,w,h]of G.walls){const cx=Math.max(a,Math.min(b.x,a+w)),cy=Math.max(c,Math.min(b.y,c+h)),dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy);if(d<b.r){if(b.bn>0&&d>0){const nx=dx/d,ny=dy/d,dot=b.vx*nx+b.vy*ny;b.vx-=2*dot*nx;b.vy-=2*dot*ny;b.x=cx+nx*(b.r+.5);b.y=cy+ny*(b.r+.5);b.bn--;b.rb=1;beep(520,.04,"square",.03)}else return false;break}}
@@ -470,6 +486,15 @@ function eggSay(t){const el=$("#eg-t");EGG.full=t;EGG.i=0;EGG.typing=true;el.tex
 function eggDone(){EGG.typing=false;if(EGG.step===1&&!EGG.to)EGG.to=setTimeout(eggEnd,2500)}
 function eggNext(){if(!EGG||!EGG.full)return;if(EGG.typing){clearInterval(EGG.iv);$("#eg-t").textContent=EGG.full;eggDone();return}if(EGG.step===0){EGG.step=1;eggSay("* And I have never known defeat.")}else eggEnd()}
 function eggEnd(){if(!EGG)return;const o=EGG.o;clearInterval(EGG.iv);clearTimeout(EGG.to);clearTimeout(EGG.t1);clearTimeout(EGG.t2);o.classList.remove("on");setTimeout(()=>o.remove(),700);EGG=null}
+const BUILD="shot-r8-2026-11-24";
+function interp(p,t){const bf=p.buf,n=bf.length,rt=t-90;if(n===1||rt<=bf[0].t){p.x=bf[0].x;p.y=bf[0].y;return}
+ let i=n-1;while(i>1&&bf[i-1].t>rt)i--;const a=bf[i-1],b=bf[i],span=b.t-a.t||1;
+ if(rt>b.t){const e=Math.min(rt-b.t,150);p.x=b.x+(b.x-a.x)/span*e;p.y=b.y+(b.y-a.y)/span*e}else{const f=Math.max(0,Math.min(1,(rt-a.t)/span));p.x=a.x+(b.x-a.x)*f;p.y=a.y+(b.y-a.y)*f}}
+function mkStick(el,cb){let id=null;const k=el.querySelector("i"),R=44;
+ const mv=e=>{const r=el.getBoundingClientRect();let x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2);const m=Math.hypot(x,y);if(m>R){x=x/m*R;y=y/m*R}k.style.transform=`translate(${x}px,${y}px)`;cb(x/R,y/R,true)};
+ el.onpointerdown=e=>{id=e.pointerId;try{el.setPointerCapture(id)}catch(x){}el.classList.add("act");mv(e)};
+ el.onpointermove=e=>{if(e.pointerId===id)mv(e)};
+ el.onpointerup=el.onpointercancel=e=>{if(e.pointerId!==id)return;id=null;el.classList.remove("act");k.style.transform="";cb(0,0,false)}}
 function home(){return `<h1>Mongrel Games</h1><p class="sub">${GN[S.game]||GN.imp} · <a class="lnk" onclick="S.page='games';render()">all games</a></p>
 <div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
