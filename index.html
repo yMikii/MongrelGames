@@ -490,9 +490,9 @@ function eggStart(){if(EGG)return;const o=document.createElement("div");o.id="eg
  EGG={o,step:0,typing:false};requestAnimationFrame(()=>requestAnimationFrame(()=>o.classList.add("on")));
  EGG.t1=setTimeout(()=>ch.classList.add("show"),1000);EGG.t2=setTimeout(()=>{tb.classList.add("show");eggSay("* I am Mongrel, Blade of Burger...")},2300);tb.onclick=eggNext}
 function eggSay(t){const el=$("#eg-t");EGG.full=t;EGG.i=0;EGG.typing=true;el.textContent="";clearInterval(EGG.iv);EGG.iv=setInterval(()=>{if(!EGG)return;EGG.i++;el.textContent=t.slice(0,EGG.i);const c=t[EGG.i-1];if(c&&c!==" "&&c!=="*")beep(500+Math.random()*70,.05,"square",.045);if(EGG.i>=t.length){clearInterval(EGG.iv);eggDone()}},45)}
-function eggDone(){EGG.typing=false;if(EGG.step===1&&!EGG.to)EGG.to=setTimeout(eggEnd,2500)}
-function eggNext(){if(!EGG||!EGG.full)return;if(EGG.typing){clearInterval(EGG.iv);$("#eg-t").textContent=EGG.full;eggDone();return}if(EGG.step===0){EGG.step=1;eggSay("* And I have never known defeat.")}else eggEnd()}
-function eggEnd(){if(!EGG)return;const o=EGG.o;clearInterval(EGG.iv);clearTimeout(EGG.to);clearTimeout(EGG.t1);clearTimeout(EGG.t2);o.classList.remove("on");setTimeout(()=>o.remove(),700);EGG=null}
+function eggDone(){EGG.typing=false;if(EGG.step===1&&!EGG.to)EGG.to=setTimeout(eggBattle,2500)}
+function eggNext(){if(!EGG||!EGG.full)return;if(EGG.typing){clearInterval(EGG.iv);$("#eg-t").textContent=EGG.full;eggDone();return}if(EGG.step===0){EGG.step=1;eggSay("* And I have never known defeat.")}else eggBattle()}
+function eggEnd(){if(!EGG)return;utStop();const o=EGG.o;clearInterval(EGG.iv);clearTimeout(EGG.to);clearTimeout(EGG.t1);clearTimeout(EGG.t2);o.classList.remove("on");setTimeout(()=>o.remove(),700);EGG=null}
 const BUILD="shot-r9-2026-11-24";
 function interp(p,t){const bf=p.buf,n=bf.length,rt=t-90;if(n===1||rt<=bf[0].t){p.x=bf[0].x;p.y=bf[0].y;return}
  let i=n-1;while(i>1&&bf[i-1].t>rt)i--;const a=bf[i-1],b=bf[i],span=b.t-a.t||1;
@@ -502,6 +502,102 @@ function mkStick(el,cb){let id=null;const k=el.querySelector("i"),R=44;
  el.onpointerdown=e=>{id=e.pointerId;try{el.setPointerCapture(id)}catch(x){}el.classList.add("act");mv(e)};
  el.onpointermove=e=>{if(e.pointerId===id)mv(e)};
  el.onpointerup=el.onpointercancel=e=>{if(e.pointerId!==id)return;id=null;el.classList.remove("act");k.style.transform="";cb(0,0,false)}}
+/* ===== Secret: Undertale-style boss fight (player is a burger) ===== */
+let UT=null;const UTW=640,UTH=480;
+const UTBUB=["Sesame… SHOWER!","Walls of lettuce!","Behold: the Ketchup Whirl!","Crossfire of pickles!","I NEVER LOSE!","The Blade hungers!","You can’t dodge forever!"];
+const UTFLAV=["* Mongrel blocks the way!","* Smells like grilled onions.","* Mongrel adjusts his bun.","* The blade glints with grease.","* Your burger heart pounds."];
+const UTKEY={arrowleft:"L",a:"L",arrowright:"R",d:"R",arrowup:"U",w:"U",arrowdown:"D",s:"D",z:"Z",enter:"Z"," ":"Z",x:"X",backspace:"X"};
+const UTMENU={x:32,y:250,w:576,h:140},UTATK={x:240,y:235,w:160,h:160};
+function eggBattle(){if(!EGG||EGG.fight)return;["iv","to","t1","t2"].forEach(k=>{clearInterval(EGG[k]);clearTimeout(EGG[k])});EGG.fight=true;const o=EGG.o;o.innerHTML="";
+ const cv=document.createElement("canvas");cv.width=UTW;cv.height=UTH;cv.style.cssText="width:min(98vw,calc((100dvh - 8px)*1.3333));image-rendering:pixelated;touch-action:none;background:#000";o.appendChild(cv);
+ const img=new Image();try{const m=/url\(["']?(.*?)["']?\)$/.exec(getComputedStyle(document.body,"::after").backgroundImage);if(m)img.src=m[1]}catch(e){}
+ UT={cv,x:cv.getContext("2d"),img,keys:{},t:0,last:performance.now()};utReset();
+ UT.kd=e=>utKey(e,true);UT.ku=e=>utKey(e,false);document.addEventListener("keydown",UT.kd);document.addEventListener("keyup",UT.ku);
+ cv.onpointerdown=utPtr;cv.onpointermove=utPtrMove;cv.onpointerup=cv.onpointercancel=()=>{if(UT)UT.drag=null};UT.raf=requestAnimationFrame(utLoop)}
+function utStop(){if(!UT)return;cancelAnimationFrame(UT.raf);document.removeEventListener("keydown",UT.kd);document.removeEventListener("keyup",UT.ku);UT=null}
+function utReset(){const u=UT;Object.assign(u,{hp:20,mhp:20,bhp:90,bmhp:90,turn:0,comp:0,fries:2,shake:1,sel:0,sub:0,bul:[],pl:{x:320,y:315},inv:0,bx:{...UTMENU},tbx:{...UTMENU},full:"",ci:0,typing:false,tt:0,shake0:0,dmg:null,fx:[],over:0,diss:0,gone:false,spared:false,said:false,picked:{}});utSay("* Mongrel blocks the way!",()=>{u.st="menu";utFlavor()})}
+function utFlavor(){const u=UT;u.full=u.comp>=4?"* Mongrel looks ready to be spared.":UTFLAV[u.turn%UTFLAV.length];u.ci=0;u.typing=true;u.tt=0}
+function utSay(t,cb){const u=UT;u.st="msg";u.full=t;u.ci=0;u.typing=true;u.tt=0;u.after=cb}
+function utKey(e,dn){if(!UT)return;const k=e.key.toLowerCase();if(k==="escape"){if(dn)eggEnd();return}UT.keys[k]=dn;const m=UTKEY[k];if(m&&(k.startsWith("arrow")||k===" "||k==="enter"||k==="backspace"))e.preventDefault();if(dn&&!e.repeat&&m)utPress(m)}
+function utList(){const u=UT;return u.sel===1?["Check","Compliment"]:u.sel===2?[`Fries x${u.fries}`,`Shake x${u.shake}`]:["Spare","Flee"]}
+function utPress(k){const u=UT;if(!u)return;
+ if(u.st==="msg"){if(k==="Z"){if(u.typing){u.ci=u.full.length;u.typing=false}else{const f=u.after;u.after=null;if(f)f()}}return}
+ if(u.st==="menu"){if(k==="L")u.sel=(u.sel+3)%4;else if(k==="R")u.sel=(u.sel+1)%4;else if(k==="Z"){beep(900,.06,"square",.05);if(u.sel===0){u.st="fight";u.cur=0;u.hit=null}else{u.st="sub";u.sub=0}return}else return;beep(700,.04,"square",.04);return}
+ if(u.st==="sub"){const n=utList().length;if(k==="U")u.sub=(u.sub+n-1)%n;else if(k==="D")u.sub=(u.sub+1)%n;else if(k==="X"){u.st="menu";utFlavor()}else if(k==="Z"){beep(900,.06,"square",.05);utPick()}else return;if(k!=="Z")beep(700,.04,"square",.04);return}
+ if(u.st==="fight"){if(k==="Z"&&!u.hit)utStrike(false);return}
+ if(u.st==="over"&&u.over>.8){if(k==="Z")utRetry();else if(k==="X")eggEnd()}}
+function utPick(){const u=UT,a=u.sel,i=u.sub,go=()=>utEnemy();
+ if(a===1){if(i===0)utSay("* MONGREL - ATK 9 DEF 2\n* Blade of Burger. Never known defeat.\n* ...Seems to crave praise.",go);else{u.comp++;beep(1000,.1,"triangle",.05);utSay(u.comp>=4?"* You compliment Mongrel's blade.\n* He's blushing. He can be SPARED!":"* You say Mongrel's blade is shiny.\n* His attacks get slower.",go)}}
+ else if(a===2){const k=i===0?"fries":"shake",h=i===0?10:20;if(u[k]<=0){utSay("* You're out of that.",()=>{u.st="menu";utFlavor()});return}u[k]--;u.hp=Math.min(u.mhp,u.hp+h);beep(1200,.12,"triangle",.06);utSay(u.hp>=u.mhp?`* You ate the ${i===0?"Fries":"Shake"}. HP maxed out!`:`* You ate the ${i===0?"Fries":"Shake"}. Recovered ${h} HP!`,go)}
+ else if(a===3){if(i===0){if(u.comp>=4){u.spared=true;utSay("* You spared Mongrel.\n* \"...Maybe defeat isn't so bad.\"",eggEnd)}else utSay("* Mongrel doesn't want mercy yet.",go)}else utSay("* Burgers can't run from this fight!",go)}}
+function utStrike(miss){const u=UT,d=Math.abs(u.cur-288)/288,dmg=miss||d>1?0:Math.round(4+20*(1-d));u.hit={dmg};u.st="strike";u.sh=0;u.applied=0;beep(dmg?500:200,.15,"sawtooth",.06)}
+function utEnemy(){const u=UT;u.st="talk";u.bub=UTBUB[u.turn%UTBUB.length];u.bi=0;u.btyping=true;u.tw=0;u.tt=0}
+function utStartAtk(){const u=UT;u.st="atk";u.at=0;u.bul=[];u.sp=u.w1=u.hm=u.sl=u.sr=0;u.dur=Math.min(10,7+u.turn*.5);u.mult=Math.min(1.7,1+u.turn*.12)*Math.pow(.94,u.comp);u.tbx={...UTATK};u.pl={x:320,y:315};u.dmg=null}
+function utVec(u){const k=u.keys;let x=(k.arrowright||k.d?1:0)-(k.arrowleft||k.a?1:0),y=(k.arrowdown||k.s?1:0)-(k.arrowup||k.w?1:0);const m=Math.hypot(x,y);return m?[x/m,y/m]:[0,0]}
+function utSpawn(u,dt){const b=u.tbx,sm=u.mult,p=u.turn%5,at=u.at;if(at<.6)return;u.sp+=dt;
+ const add=(x,y,vx,vy,r,o)=>u.bul.push({x,y,vx,vy,r:r||5,...o}),rd=()=>Math.random();
+ const rain=(iv,v)=>{while(u.sp>iv/sm){u.sp-=iv/sm;add(b.x+8+rd()*(b.w-16),b.y-6,(rd()-.5)*30,v*sm+rd()*40)}};
+ const wallV=(iv,v)=>{u.w1+=dt;if(u.w1>iv){u.w1=0;const gx=b.x+6+rd()*(b.w-12-54);for(let x=b.x+6;x<b.x+b.w-4;x+=12)if(x<gx-2||x>gx+54)add(x,b.y-6,0,v*sm)}};
+ if(p===0)rain(.17,125);
+ else if(p===1)wallV(1.15,100);
+ else if(p===2){while(u.sp>.07){u.sp-=.07;const a=Math.PI/2+Math.sin(at*1.7)*1.15;add(b.x+b.w/2,b.y-8,Math.cos(a)*110*sm,Math.sin(a)*110*sm);if(at>2&&Math.round(at*14.3)%2){const c=-Math.PI/2+Math.sin(at*1.3+1)*1.1;add(b.x+b.w/2,b.y+b.h+8,Math.cos(c)*105*sm,Math.sin(c)*105*sm)}}}
+ else if(p===3){u.sl+=dt;while(u.sl>.26/sm){u.sl-=.26/sm;add(b.x-6,b.y+8+rd()*(b.h-16),135*sm,0)}u.sr+=dt;while(u.sr>.38/sm){u.sr-=.38/sm;add(b.x+b.w+6,b.y+8+rd()*(b.h-16),-135*sm,0)}}
+ else{rain(.3,125);u.hm+=dt;if(u.hm>2.4){u.hm=0;add(b.x+b.w/2,b.y-8,0,50,7,{homing:1,life:3.2})}
+  u.sl+=dt;if(u.sl>1.75){u.sl=0;const gy=b.y+6+rd()*(b.h-12-60);for(let y=b.y+6;y<b.y+b.h-4;y+=12)if(y<gy-2||y>gy+60)add(b.x-6,y,110*sm,0)}}}
+function utHurt(d){const u=UT;if(u.inv>0)return;u.hp-=d;u.inv=1;u.flash=.15;beep(150,.12,"sawtooth",.07);if(u.hp<=0){u.hp=0;u.st="dead";u.over=0;beep(100,.5,"sawtooth",.08);u.fx=[[-10,-6,"#e8a33d"],[10,-6,"#e8a33d"],[-8,2,"#6f3b1e"],[8,2,"#e8a33d"]].map(([dx,dy,c])=>({x:u.pl.x+dx,y:u.pl.y+dy,vx:dx*9+(Math.random()-.5)*40,vy:-60-Math.random()*60,c}))}}
+function utAtk(dt){const u=UT;u.at+=dt;const v=u.bot?u.bot(u):utVec(u),bx=u.bx,p=u.pl;
+ p.x+=v[0]*140*dt;p.y+=v[1]*140*dt;p.x=Math.max(bx.x+10,Math.min(bx.x+bx.w-10,p.x));p.y=Math.max(bx.y+10,Math.min(bx.y+bx.h-10,p.y));
+ utSpawn(u,dt);
+ u.bul=u.bul.filter(b=>{if(b.homing){const dx=p.x-b.x,dy=p.y-b.y,m=Math.hypot(dx,dy)||1;b.vx=dx/m*55;b.vy=dy/m*55;b.life-=dt;if(b.life<=0)return false}
+  b.x+=b.vx*dt;b.y+=b.vy*dt;if(Math.hypot(b.x-p.x,b.y-p.y)<b.r+4&&u.st==="atk")utHurt(b.homing?6:5);const t=u.tbx;return b.x>t.x-30&&b.x<t.x+t.w+30&&b.y>t.y-30&&b.y<t.y+t.h+30});
+ if(u.st==="atk"&&u.at>u.dur){u.st="back";u.bk=0;u.bul=[];u.tbx={...UTMENU};u.turn++}}
+function utUpdate(dt){const u=UT,f=Math.min(1,dt*9),b=u.bx,g=u.tbx;b.x+=(g.x-b.x)*f;b.y+=(g.y-b.y)*f;b.w+=(g.w-b.w)*f;b.h+=(g.h-b.h)*f;
+ if(u.shake0>0)u.shake0=Math.max(0,u.shake0-dt);if(u.inv>0)u.inv-=dt;if(u.flash>0)u.flash-=dt;
+ if(u.st==="msg"||u.st==="menu"){if(u.typing){u.tt+=dt;while(u.tt>.035&&u.typing){u.tt-=.035;u.ci++;const c=u.full[u.ci-1];if(c&&c!==" "&&c!=="*"&&c!=="\n")beep(620,.03,"square",.035);if(u.ci>=u.full.length)u.typing=false}}}
+ else if(u.st==="talk"){if(u.btyping){u.tt+=dt;while(u.tt>.04&&u.btyping){u.tt-=.04;u.bi++;beep(330,.03,"square",.04);if(u.bi>=u.bub.length)u.btyping=false}}else{u.tw+=dt;if(u.tw>.8)utStartAtk()}}
+ else if(u.st==="fight"){u.cur+=dt*400;if(u.cur>=576&&!u.hit)utStrike(true)}
+ else if(u.st==="strike"){u.sh+=dt;if(u.sh>.45&&!u.applied){u.applied=1;u.bhp=Math.max(0,u.bhp-u.hit.dmg);u.dmg={v:u.hit.dmg,t:0};if(u.hit.dmg)u.shake0=.6}if(u.dmg)u.dmg.t+=dt;if(u.sh>1.7){if(u.bhp<=0){u.st="win";u.diss=0;beep(200,.8,"sawtooth",.08)}else utEnemy()}}
+ else if(u.st==="atk")utAtk(dt);
+ else if(u.st==="back"){u.bk+=dt;if(u.bk>.5){u.st="menu";utFlavor()}}
+ else if(u.st==="dead"){u.over+=dt;u.fx.forEach(q=>{q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=260*dt});if(u.over>1.6){u.st="over";u.over=0}}
+ else if(u.st==="over")u.over+=dt;
+ else if(u.st==="win"){u.diss+=dt;if(u.diss>2.4&&!u.said){u.said=true;u.gone=true;utSay("* YOU WON!\n* You earned 0 EXP and 0 gold.",eggEnd)}}}
+function utRetry(){const u=UT;u.keys={};utReset()}
+function utPtr(e){const u=UT;if(!u)return;const r=u.cv.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*UTW,py=(e.clientY-r.top)/r.height*UTH;try{u.cv.setPointerCapture(e.pointerId)}catch(x){}
+ if(u.st==="atk"){u.drag={x:e.clientX,y:e.clientY};return}
+ if(u.st==="msg"||u.st==="fight"){utPress("Z");return}
+ if(u.st==="menu"){if(py>425){const i=[32,185,345,500].findIndex(x=>px>=x&&px<=x+110);if(i>=0){u.sel=i;utPress("Z")}}return}
+ if(u.st==="sub"){const b=u.bx;if(px>b.x&&px<b.x+b.w&&py>b.y&&py<b.y+b.h){const n=utList().length,i=Math.max(0,Math.min(n-1,Math.floor((py-(b.y+18))/38)));u.sub=i;utPress("Z")}else utPress("X");return}
+ if(u.st==="over"&&u.over>.8)px<UTW/2?utPress("Z"):utPress("X")}
+function utPtrMove(e){const u=UT;if(!u||!u.drag||u.st!=="atk")return;const r=u.cv.getBoundingClientRect(),b=u.bx;u.pl.x+=(e.clientX-u.drag.x)*UTW/r.width;u.pl.y+=(e.clientY-u.drag.y)*UTH/r.height;u.drag={x:e.clientX,y:e.clientY};u.pl.x=Math.max(b.x+10,Math.min(b.x+b.w-10,u.pl.x));u.pl.y=Math.max(b.y+10,Math.min(b.y+b.h-10,u.pl.y))}
+function utLoop(t){const u=UT;if(!u)return;const dt=Math.min(.05,Math.max(0,(t-u.last)/1000));u.last=t;u.t+=dt;try{utUpdate(dt);utDraw()}catch(e){console.error(e)}if(UT)UT.raf=requestAnimationFrame(utLoop)}
+function utBurger(x,cx,cy,s,a){x.save();x.globalAlpha=a;x.translate(cx,cy);x.scale(s,s);x.fillStyle="#e8a33d";x.beginPath();x.ellipse(0,-4,10,6,0,Math.PI,0);x.fill();x.fillStyle="#fff3bf";[-5,0,5].forEach(d=>x.fillRect(d,-8,1.5,1));x.fillStyle="#51cf66";x.fillRect(-10,-4,20,2);x.fillStyle="#6f3b1e";x.fillRect(-10,-2,20,4);x.fillStyle="#fcc419";x.fillRect(-9,2,18,1.5);x.fillStyle="#e8a33d";x.fillRect(-9,3.5,18,3.5);x.restore()}
+const utWrap=(t,n)=>{const o=[];let l="";t.split(" ").forEach(w=>{if((l+" "+w).trim().length>n){o.push(l);l=w}else l=(l+" "+w).trim()});o.push(l);return o};
+function utDraw(){const u=UT,x=u.x;x.setTransform(1,0,0,1,0,0);x.fillStyle="#000";x.fillRect(0,0,UTW,UTH);x.textBaseline="top";x.textAlign="left";const FONT=n=>`${n}px "Determination Mono","Courier New",monospace`;
+ // boss
+ const im=u.img,ok=im.complete&&im.naturalWidth>0,H=ok?Math.min(200,170*im.naturalHeight/im.naturalWidth):170,Wd=ok?H*im.naturalWidth/im.naturalHeight:170;
+ const ox=320-Wd/2+Math.sin(u.t*2)*6+(u.shake0>0?Math.sin(u.t*90)*10*u.shake0:0),oy=20+Math.sin(u.t*3)*3;
+ if(!u.gone){x.save();if(u.spared)x.globalAlpha=.55;
+  if(u.st==="win"){const p=Math.min(1,u.diss/2.4);for(let i=0;i<H;i+=4){const h=Math.sin(i*12.9898)*43758.5453,r=h-Math.floor(h);x.globalAlpha=Math.max(0,1-p*(.6+r));const dx=(r-.5)*p*60;if(ok)x.drawImage(im,0,i/H*im.naturalHeight,im.naturalWidth,4/H*im.naturalHeight,ox+dx,oy+i,Wd,4);else{x.fillStyle="#d6336c";x.fillRect(ox+dx,oy+i,Wd,4)}}}
+  else if(ok)x.drawImage(im,ox,oy,Wd,H);else{x.fillStyle="#d6336c";x.beginPath();x.arc(320,oy+85,70,0,7);x.fill()}x.restore()}
+ if(u.dmg&&u.dmg.t<1.2&&!u.gone){const w=120;x.fillStyle="#666";x.fillRect(260,6,w,12);x.fillStyle="#0f0";x.fillRect(260,6,w*u.bhp/u.bmhp,12);x.fillStyle="#f00";x.font=FONT(30);x.textAlign="center";x.fillText(u.dmg.v?String(u.dmg.v):"MISS",320,20-Math.min(1,u.dmg.t*3)*10+16);x.textAlign="left"}
+ if(u.st==="talk"){x.fillStyle="#fff";x.fillRect(405,36,225,96);x.beginPath();x.moveTo(405,80);x.lineTo(385,92);x.lineTo(405,100);x.fill();x.fillStyle="#000";x.font=FONT(20);utWrap(u.bub.slice(0,u.bi),16).forEach((l,i)=>x.fillText(l,415,46+i*24))}
+ // dead / game over
+ if(u.st==="dead"){u.fx.forEach(q=>{x.fillStyle=q.c;x.fillRect(q.x-5,q.y-3,10,6)});return}
+ if(u.st==="over"){x.fillStyle="#fff";x.font=FONT(72);x.textAlign="center";x.fillText("GAME OVER",320,120);x.font=FONT(22);x.fillText("* Your burger fell apart...",320,230);x.fillText("* Stay determined...",320,262);if(u.over>.8){x.fillStyle="#ffff00";x.fillText("[Z / tap left] TRY AGAIN",170,380);x.fillStyle="#aaa";x.fillText("[X / tap right] GIVE UP",490,430)}x.textAlign="left";return}
+ // box
+ const b=u.bx;x.fillStyle="#000";x.fillRect(b.x,b.y,b.w,b.h);x.strokeStyle="#fff";x.lineWidth=5;x.strokeRect(b.x,b.y,b.w,b.h);
+ x.fillStyle="#fff";x.font=FONT(26);const big=b.w>400;
+ if(big&&(u.st==="msg"||u.st==="menu"))u.full.slice(0,u.ci).split("\n").forEach((l,i)=>x.fillText(l,b.x+24,b.y+16+i*34));
+ if(big&&u.st==="sub"){utList().forEach((l,i)=>{x.fillStyle=u.sel===3&&i===0&&u.comp>=4?"#ff0":"#fff";x.fillText("* "+l,b.x+70,b.y+18+i*38);if(i===u.sub)utBurger(x,b.x+40,b.y+34+i*38,1.1,1)})}
+ if(big&&(u.st==="fight"||u.st==="strike")){x.fillStyle="#2a2a2a";x.fillRect(b.x+10,b.y+10,b.w-20,b.h-20);x.fillStyle="#fff";x.fillRect(b.x+10+286,b.y+10,4,b.h-20);for(let i=0;i<=8;i++)x.fillRect(b.x+10+i*70,b.y+10,2,b.h-20);
+  if(u.st==="fight"){x.fillStyle=Math.floor(u.t*10)%2?"#fff":"#ff0";x.fillRect(b.x+10+u.cur,b.y+6,8,b.h-12)}else{x.fillStyle="#fff";x.fillRect(b.x+10+Math.min(576,u.cur),b.y+6,8,b.h-12)}
+  if(u.st==="strike"&&u.sh<.45){x.strokeStyle="#fff";x.lineWidth=4;for(let i=0;i<3;i++){x.beginPath();x.moveTo(250+i*30,70+u.sh*200);x.lineTo(300+i*30,120+u.sh*200);x.stroke()}}}
+ if(u.st==="atk"||u.st==="dead"){u.bul.forEach(q=>{x.fillStyle=q.homing?"#ffd43b":"#fff";x.beginPath();x.arc(q.x,q.y,q.r,0,7);x.fill();if(q.homing){x.strokeStyle="#e03131";x.lineWidth=2;x.stroke()}})}
+ if(u.st==="atk"){const vis=u.inv>0?Math.floor(u.t*14)%2:1;utBurger(x,u.pl.x,u.pl.y,1.1,vis?1:.35);x.fillStyle="#fff";x.fillRect(u.pl.x-1,u.pl.y-1,2,2)}
+ // status + buttons
+ x.fillStyle="#fff";x.font=FONT(22);x.fillText("BURGER",32,402);x.fillText("LV 1",180,402);x.font=FONT(14);x.fillText("HP",262,408);x.fillStyle="#f00";x.fillRect(288,402,u.mhp*5,22);x.fillStyle=u.flash>0?"#fff":"#ff0";x.fillRect(288,402,u.hp/u.mhp*u.mhp*5,22);x.fillStyle="#fff";x.font=FONT(22);x.fillText(`${u.hp} / ${u.mhp}`,288+u.mhp*5+14,402);
+ ["FIGHT","ACT","ITEM","MERCY"].forEach((n,i)=>{const bxp=[32,185,345,500][i],sel=u.sel===i&&(u.st==="menu"||u.st==="sub"||u.st==="fight");x.strokeStyle=sel?"#ff0":"#ff8a00";x.lineWidth=3;x.strokeRect(bxp,432,110,38);x.fillStyle=i===3&&u.comp>=4?"#ff0":sel?"#ff0":"#ff8a00";x.font=FONT(22);x.textAlign="center";x.fillText(n,bxp+60,440);x.textAlign="left";if(sel)utBurger(x,bxp+14,451,.8,1)})}
 function home(){return `<h1>Mongrel Games</h1><p class="sub">${GN[S.game]||GN.imp} · <a class="lnk" onclick="S.page='games';render()">all games</a></p>
 <div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
