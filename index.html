@@ -116,6 +116,26 @@ main{padding-bottom:90px}
 @media (pointer:coarse){#sh-box{width:min(94vw,calc(100dvh - 90px))}}
 #sh-top.many{gap:5px}#sh-top.many .sc{padding:2px 8px;font-size:12px;gap:5px}#sh-top.many .sc b{font-size:15px}#sh-top.many .sc i{width:10px;height:10px}
 </style>
+<style>
+#bh{position:fixed;inset:0;z-index:20;background:#000;color:#fff;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;user-select:none;touch-action:none;overflow:hidden}
+#bh-cv{width:100%;height:100%;display:block}
+#bh-top{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);left:0;right:0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;pointer-events:none}
+#bh-top span,#bh-feed div,#bh-ammo,#bh-q{background:rgba(0,0,0,.55);border-radius:10px;padding:4px 12px;font-weight:700}
+#bh-cross{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px;pointer-events:none;opacity:.9}
+#bh-cross:before,#bh-cross:after{content:"";position:absolute;background:#fff;box-shadow:0 0 2px #000}#bh-cross:before{left:8px;top:0;width:2px;height:18px}#bh-cross:after{top:8px;left:0;height:2px;width:18px}
+#bh-msg{position:absolute;top:22%;left:0;right:0;text-align:center;font-size:24px;font-weight:800;text-shadow:0 2px 6px #000;pointer-events:none}
+#bh-feed{position:absolute;top:60px;right:10px;display:flex;flex-direction:column;gap:4px;align-items:flex-end;pointer-events:none;font-size:14px}
+#bh-props{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);left:0;right:0;display:flex;gap:8px;justify-content:center}
+.bhp{width:62px;padding:6px 0;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;border:3px solid #fff3;box-shadow:none;font-size:28px;line-height:1}.bhp small{display:block;font-size:12px;opacity:.8}.bhp.sel{border-color:#ffd43b;background:rgba(255,212,59,.3)}
+#bh-ammo{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);left:50%;transform:translateX(-50%);font-size:20px;pointer-events:none}
+#bh-ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px;pointer-events:none}
+#bh-ov table{border-collapse:collapse;background:rgba(0,0,0,.6);border-radius:12px;overflow:hidden}#bh-ov td,#bh-ov th{padding:5px 14px}
+#bh-btns{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);left:8px;display:flex;gap:6px}
+#bh-btns button{padding:4px 10px;font-size:13px;background:rgba(0,0,0,.55);color:#fff;border:2px solid #fff4;box-shadow:none}
+#stkBL{left:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 90px)}#stkBR{right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 90px)}
+.bhb{display:none;position:fixed;z-index:26;width:74px;height:74px;border-radius:50%;font-size:30px;padding:0;background:rgba(255,255,255,.25);color:#fff;border:3px solid #fff6;box-shadow:none}
+@media (pointer:coarse){.bhb{display:block}#bh-fire{right:168px;bottom:calc(env(safe-area-inset-bottom,0px) + 100px)}#bh-jump{right:176px;bottom:calc(env(safe-area-inset-bottom,0px) + 190px)}#bh-props{bottom:calc(env(safe-area-inset-bottom,0px) + 252px)}.bhp{width:54px}}
+</style>
 </head>
 <body><button id="mute" onclick="toggleMute()" aria-label="Toggle sound">🔊</button><div id="eggR" onclick="eggStart()"></div><div id="rx"></div><div id="rwrap"><button class="ghost" onclick="sendReact('😂')" aria-label="Laugh">😂</button><button class="ghost" onclick="sendReact('🇹🇼')" aria-label="Taiwan flag">🇹🇼</button><button class="ghost" onclick="sendReact('🫃')" aria-label="Pregnant man">🫃</button><button class="ghost" onclick="sendReact('🇮🇱')" aria-label="Israel flag">🇮🇱</button><button class="ghost" onclick="sendReact('🪬')" aria-label="Hamsa">🪬</button></div><main id="app"><p class="sub">Loading…</p></main>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -156,7 +176,7 @@ function render(){
  const fid=a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="checkbox"?a.id:"",cs=fid?a.selectionStart:0;
  S.pending=false;const el=$("#app");
  if(!S.db){el.innerHTML=`<h1>Mongrel Games</h1><p class="sub">Could not connect to Firebase. Check that your config is pasted in index.html, that Anonymous sign-in is enabled, and that Firestore is created.</p>`;return}
- el.className=S.code&&S.room&&["wave","hang","scat","shot"].includes(S.room.game)&&S.page!=="manage"?"wide":"";el.innerHTML=S.page==="manage"?(S.admin?manage():login()):S.page==="login"?login():S.page==="invite"?invite():S.page==="games"?games():S.code&&S.room?game():home();paintTimers();restoreDrafts(fid,cs);
+ el.className=S.code&&S.room&&["wave","hang","scat","shot","bh"].includes(S.room.game)&&S.page!=="manage"?"wide":"";el.innerHTML=S.page==="manage"?(S.admin?manage():login()):S.page==="login"?login():S.page==="invite"?invite():S.page==="games"?games():S.code&&S.room?game():home();paintTimers();restoreDrafts(fid,cs);
 }
 document.addEventListener("focusout",e=>{if(e.relatedTarget&&e.relatedTarget.tagName==="BUTTON")return;setTimeout(()=>{if(S.pending)render()},250)});
 
@@ -167,7 +187,7 @@ function games(){return `<h1>Mongrel Games</h1><p class="sub">Join a friend’s 
 <button class="gcard" style="--c:#d6336c" onclick="S.game='imp';S.page='home';S.err='';render()"><span class="ge">🕵️</span><b>Guess the Impostor</b><span class="mute">One player doesn’t know the word. Hint, bluff, vote.</span></button>
 <button class="gcard" style="--c:#1c7ed6" onclick="S.game='wave';S.page='home';S.err='';render()"><span class="ge">🎯</span><b>Wavelength</b><span class="mute">Read your friend’s mind on a dial. Score up to 3 points.</span></button>
 <button class="gcard" style="--c:#f08c00" onclick="S.game='hang';S.page='home';S.err='';render()"><span class="ge">🍔</span><b>Burger Hangman</b><span class="mute">Guess the word before the burger is built.</span></button>
-<button class="gcard" style="--c:#2f9e44" onclick="S.game='scat';S.page='home';S.err='';render()"><span class="ge">🚌</span><b>Scattergories</b><span class="mute">Stop the bus! Fast answers, one random letter.</span></button><button class="gcard" style="--c:#7048e8" onclick="S.game='shot';S.page='home';S.err='';render()"><span class="ge">🔫</span><b>Mongrel Shot</b><span class="mute">Top-down blob shooter. Pick upgrades, win 5 rounds.</span></button><p class="mute">More games coming soon.</p>`}
+<button class="gcard" style="--c:#2f9e44" onclick="S.game='scat';S.page='home';S.err='';render()"><span class="ge">🚌</span><b>Scattergories</b><span class="mute">Stop the bus! Fast answers, one random letter.</span></button><button class="gcard" style="--c:#7048e8" onclick="S.game='shot';S.page='home';S.err='';render()"><span class="ge">🔫</span><b>Mongrel Shot</b><span class="mute">Top-down blob shooter. Pick upgrades, win 5 rounds.</span></button><button class="gcard" style="--c:#e8590c" onclick="S.game='bh';S.page='home';S.err='';render()"><span class="ge">🍔</span><b>Burger Hunt</b><span class="mute">3D prop hunt. Hide as food, or hunt the hiders.</span></button><p class="mute">More games coming soon.</p>`}
 const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 function guessBox(r){return r.impostor===S.uid&&r.guessOn?`<div class="card"><h2>Think you know the word?</h2><input id="gw" maxlength="40" placeholder="Guess the secret word"><button style="width:100%" onclick="guessWord($('#gw').value)">Submit guess</button><p class="mute">Right = you win. Wrong = the crew wins.</p></div>`:""}
 function setGuess(on){guard(()=>S.db.doc("rooms/"+S.code).update({guessOn:on}))}
@@ -250,7 +270,7 @@ function paintTimers(){const now=Date.now();document.querySelectorAll("[data-dl]
 function tick(){paintTimers();const r=S.room;if(!S.db||!r)return;maybeAdvance();
  if(r.game==="wave"&&r.phase==="guess"&&r.dl&&Date.now()>r.dl&&r.maker!==S.uid){const m=S.players.find(p=>p.id===S.uid);if(m&&!(m.wg&&m.wg.round===r.round)&&S.alock!==r.dl){S.alock=r.dl;lockGuess()}}}
 setInterval(tick,500);
-const GN={imp:"Guess the Impostor",wave:"Wavelength",hang:"Burger Hangman",scat:"Scattergories",shot:"Mongrel Shot"};
+const GN={imp:"Guess the Impostor",wave:"Wavelength",hang:"Burger Hangman",scat:"Scattergories",shot:"Mongrel Shot",bh:"Burger Hunt"};
 const rn=r=>r.round-(r.r0||0),last=r=>rn(r)>=(r.rounds||5);
 const winners=()=>{const m=Math.max(0,...S.players.map(p=>p.score||0)),w=S.players.filter(p=>(p.score||0)===m);return w.map(p=>esc(p.name)).join(" & ")+(w.length>1?" win!":" wins!")};
 const roundsSel=r=>`<label class="chk" style="gap:10px;margin-top:10px">Rounds <select style="width:auto;margin:0" onchange="setRounds(this.value)">${[1,2,3,5,8,10].map(n=>`<option ${n===(r.rounds||5)?"selected":""}>${n}</option>`).join("")}</select></label>`;
@@ -310,7 +330,7 @@ function acceptInvite(){const n=($("#inick").value||"").trim();if(!n){S.err="Ple
 /* ===== Kick ===== */
 const kickLnk=id=>S.room&&S.room.phase==="lobby"&&isHost()&&id!==S.uid?` <a class="lnk" title="Kick" style="cursor:pointer" onclick="kick('${id}')">✕</a>`:"";
 function kick(id){const p=S.players.find(x=>x.id===id);if(!p||!confirm(`Kick ${p.name} from the lobby?`))return;guard(async()=>{await S.db.doc("rooms/"+S.code).update({kicked:firebase.firestore.FieldValue.arrayUnion(id)});await S.db.doc(`rooms/${S.code}/players/${id}`).delete()})}
-function kickCheck(){const r=S.room;if(r&&S.code&&(r.kicked||[]).includes(S.uid)){shotStop();unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");S.page="games";S.err="You were removed from the room by the host.";render()}}
+function kickCheck(){const r=S.room;if(r&&S.code&&(r.kicked||[]).includes(S.uid)){shotStop();bhStop();unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");S.page="games";S.err="You were removed from the room by the host.";render()}}
 /* ===== Mongrel Shot ===== */
 const SMODES={"1v1":{n:2,teams:2},"2v2":{n:4,teams:2},"1v1v1":{n:3,teams:3},"ffa":{n:10,teams:10}};
 const SPAWNS={"1v1":[[90,500],[910,500]],"2v2":[[90,330],[90,670],[910,330],[910,670]],"1v1v1":[[90,500],[910,250],[910,750]],"ffa":[[90,500],[910,500],[420,60],[580,940],[90,170],[910,830],[90,830],[910,170],[580,60],[420,940]]};
@@ -493,7 +513,7 @@ function eggSay(t){const el=$("#eg-t");EGG.full=t;EGG.i=0;EGG.typing=true;el.tex
 function eggDone(){EGG.typing=false;if(EGG.step===1&&!EGG.to)EGG.to=setTimeout(eggBattle,2500)}
 function eggNext(){if(!EGG||!EGG.full)return;if(EGG.typing){clearInterval(EGG.iv);$("#eg-t").textContent=EGG.full;eggDone();return}if(EGG.step===0){EGG.step=1;eggSay("* And I have never known defeat.")}else eggBattle()}
 function eggEnd(){if(!EGG)return;utStop();const o=EGG.o;clearInterval(EGG.iv);clearTimeout(EGG.to);clearTimeout(EGG.t1);clearTimeout(EGG.t2);o.classList.remove("on");setTimeout(()=>o.remove(),700);EGG=null}
-const BUILD="shot-r9-2026-11-24";
+const BUILD="bh-r1-2026-11-24";
 function interp(p,t){const bf=p.buf,n=bf.length,rt=t-90;if(n===1||rt<=bf[0].t){p.x=bf[0].x;p.y=bf[0].y;return}
  let i=n-1;while(i>1&&bf[i-1].t>rt)i--;const a=bf[i-1],b=bf[i],span=b.t-a.t||1;
  if(rt>b.t){const e=Math.min(rt-b.t,150);p.x=b.x+(b.x-a.x)/span*e;p.y=b.y+(b.y-a.y)/span*e}else{const f=Math.max(0,Math.min(1,(rt-a.t)/span));p.x=a.x+(b.x-a.x)*f;p.y=a.y+(b.y-a.y)*f}}
@@ -598,6 +618,149 @@ function utDraw(){const u=UT,x=u.x;x.setTransform(1,0,0,1,0,0);x.fillStyle="#000
  // status + buttons
  x.fillStyle="#fff";x.font=FONT(22);x.fillText("BURGER",32,402);x.fillText("LV 1",180,402);x.font=FONT(14);x.fillText("HP",262,408);x.fillStyle="#f00";x.fillRect(288,402,u.mhp*5,22);x.fillStyle=u.flash>0?"#fff":"#ff0";x.fillRect(288,402,u.hp/u.mhp*u.mhp*5,22);x.fillStyle="#fff";x.font=FONT(22);x.fillText(`${u.hp} / ${u.mhp}`,288+u.mhp*5+14,402);
  ["FIGHT","ACT","ITEM","MERCY"].forEach((n,i)=>{const bxp=[32,185,345,500][i],sel=u.sel===i&&(u.st==="menu"||u.st==="sub"||u.st==="fight");x.strokeStyle=sel?"#ff0":"#ff8a00";x.lineWidth=3;x.strokeRect(bxp,432,110,38);x.fillStyle=i===3&&u.comp>=4?"#ff0":sel?"#ff0":"#ff8a00";x.font=FONT(22);x.textAlign="center";x.fillText(n,bxp+60,440);x.textAlign="left";if(sel)utBurger(x,bxp+14,451,.8,1)})}
+/* ===== Burger Hunt: lightweight 3D prop hunt (Three.js loaded on demand) ===== */
+let BH=null;const HIDE=25,SEEK=150;
+const BHP=[{n:"Burger",i:"🍔"},{n:"Fries",i:"🍟"},{n:"Soda",i:"🥤"},{n:"Ketchup",i:"🍅"},{n:"Cheese",i:"🧀"},{n:"Pickles",i:"🥒"}];
+/* prop parts: [shape, colour, x, y, z, sx, sy, sz]  (B box, C cylinder, S sphere, K cup) */
+const BHPARTS=[
+ [["C","#e8a33d",0,.12,0,.55,.24,.55],["C","#6f3b1e",0,.36,0,.58,.22,.58],["B","#fcc419",0,.5,0,1.05,.05,1.05],["C","#51cf66",0,.57,0,.62,.08,.62],["C","#e03131",0,.65,0,.52,.08,.52],["S","#e8a33d",0,.78,0,.58,.42,.58]],
+ [["B","#e03131",0,.3,0,.9,.6,.4],["B","#ffd43b",-.2,.75,0,.14,.5,.14],["B","#ffd43b",.05,.8,.05,.14,.6,.14],["B","#ffd43b",.25,.72,-.04,.14,.45,.14]],
+ [["K","#f1f3f5",0,.5,0,.5,1,.5],["C","#e03131",0,.5,0,.52,.35,.52],["C","#ffffff",0,1.04,0,.53,.08,.53],["C","#ff6b6b",.15,1.3,0,.04,.5,.04]],
+ [["C","#e03131",0,.45,0,.35,.9,.35],["S","#e03131",0,.92,0,.35,.22,.35],["C","#fff3bf",0,1.1,0,.12,.25,.12],["C","#ffd43b",0,1.25,0,.1,.1,.1]],
+ [["B","#fcc419",0,.35,0,1,.7,.8],["S","#d9a400",.5,.4,.12,.1,.1,.1],["S","#d9a400",-.5,.25,-.1,.1,.1,.1],["S","#d9a400",.1,.7,.2,.1,.1,.1]],
+ [["C","#82c91e",0,.43,0,.45,.86,.45],["C","#868e96",0,.92,0,.47,.12,.47],["B","#ffffff",0,.45,.46,.5,.3,.02]]];
+const BHSPAWN=[[-5,3],[5,3],[-5,-3],[5,-3],[-2,4],[2,4],[-2,-4],[2,-4]];
+/* solid blocks: [x, z, width, depth, height, colour] — the arena is 60 x 60 */
+const BHBOX=[[0,-30.5,62,1,5,"#c9b79c"],[0,30.5,62,1,5,"#c9b79c"],[-30.5,0,1,62,5,"#c9b79c"],[30.5,0,1,62,5,"#c9b79c"],
+ [-25,-22,6,1,3.5,"#b0a090"],[-14,-22,12,1,3.5,"#b0a090"],[-8,-26,1,8,3.5,"#b0a090"],
+ [0,0,18,2,1.3,"#8d6e63"],[0,22,16,2,1.3,"#8d6e63"],[-22,-6,2,10,1.3,"#8d6e63"],[22,-6,2,10,1.3,"#8d6e63"],
+ [-14,-10,3.2,3.2,.9,"#a1887f"],[14,-10,3.2,3.2,.9,"#a1887f"],[-14,10,3.2,3.2,.9,"#a1887f"],[14,10,3.2,3.2,.9,"#a1887f"],[-22,2,3.2,3.2,.9,"#a1887f"],[22,2,3.2,3.2,.9,"#a1887f"],[0,-16,3.2,3.2,.9,"#a1887f"],[0,16,3.2,3.2,.9,"#a1887f"],
+ [-6,-6,1.4,1.4,5,"#d9d0c1"],[6,-6,1.4,1.4,5,"#d9d0c1"],[-6,6,1.4,1.4,5,"#d9d0c1"],[6,6,1.4,1.4,5,"#d9d0c1"],
+ [-26,18,1.6,12,3,"#8d6e63"],[26,-18,1.6,12,3,"#8d6e63"],[18,26,12,1.6,3,"#8d6e63"],[-18,26,12,1.6,3,"#8d6e63"],[20,-26,12,1.6,3,"#8d6e63"]];
+const bhRng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+function loadThree(){return window.THREE?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";sc.onload=ok;sc.onerror=()=>no(new Error("The 3D engine couldn’t load (check your connection)."));document.head.appendChild(sc)})}
+function bhSync(){const r=S.room;if(!r||r.game!=="bh")return;if(r.phase==="play"&&r.bh&&(!BH||BH.gid!==r.bh.gid))bhStart(r.bh);else if(r.phase!=="play"&&BH)bhStop()}
+function bhGame(){const r=S.room,h=isHost(),n=S.players.length,ok=n>=2&&n<=8,hm=r.bhm||"seeker";let b;
+ if(r.phase==="lobby")b=h?`<div class="card"><p>A lightweight 3D prop hunt. <b>Hiders</b> disguise as one of 6 food props and hide among the clutter. <b>Seekers</b> have a gun — a hit reveals a hider. With 5+ players there are 2 seekers, and the seekers rotate every round.</p><label class="chk" style="gap:10px">When a hider is shot <select style="width:auto;margin:0" onchange="shotOpt('bhm',this.value)"><option value="seeker" ${hm==="seeker"?"selected":""}>They become a seeker</option><option value="spec" ${hm==="spec"?"selected":""}>They spectate a seeker</option></select></label>${roundsSel(r)}<button style="width:100%;margin-top:10px" ${ok?"":"disabled"} onclick="startBH()">Start hunt</button><p class="mute">${ok?"Ready!":`Burger Hunt needs 2–8 players (${n} here).`}</p></div>`:`<p class="sub" style="text-align:center">Waiting for the host to start… (${hm==="seeker"?"shot hiders become seekers":"shot hiders spectate"}, ${r.rounds||5} rounds)</p>`;
+ else b=`<div class="card" style="text-align:center"><div class="big">🍔</div><p>The hunt is on…</p></div>`;
+ return frame("Burger Hunt",{...r,phase:"lobby"},b,"")}
+function startBH(){guard(async()=>{const r=S.room,ps=S.players;if(ps.length<2||ps.length>8){S.err="Burger Hunt needs 2–8 players.";return}await S.db.doc("rooms/"+S.code).update({phase:"play",bh:{gid:Date.now().toString(36),hm:r.bhm||"seeker",rounds:r.rounds||5,order:ps.map(p=>p.id)}})})}
+function bhStart(sh){bhStop();const ids=sh.order.filter(id=>S.players.some(p=>p.id===id));
+ BH={gid:sh.gid,hm:sh.hm,rounds:sh.rounds,ids,P:{},scores:{},hits:{},phase:"wait",round:0,t:performance.now(),t0:performance.now(),timers:[],keys:{},fx:[],feed:[],mats:{},yaw:0,pitch:0,msg:"Loading 3D engine…",jx:0,jy:0,lx:0,ly:0,ls:0,lo:0,pcd:0,q:.75,spec:null,hello:{},hits0:0};
+ BH.tm=(f,ms)=>BH.timers.push(setTimeout(()=>{if(BH)f()},ms));
+ ids.forEach((id,i)=>{const pl=S.players.find(p=>p.id===id);BH.P[id]={id,name:pl.name,color:COLORS[i%COLORS.length],role:0,x:0,y:0,z:0,vy:0,r:0,prop:0,ammo:8,rt:0,cd:0,buf:[],mk:""};BH.scores[id]=0});
+ const d=document.createElement("div");d.id="bh";d.innerHTML=`<canvas id="bh-cv"></canvas><div id="bh-top"></div><div id="bh-cross"></div><div id="bh-msg"></div><div id="bh-feed"></div><div id="bh-props"></div><div id="bh-ammo"></div><div id="bh-ov"></div><div id="bh-btns"><button onclick="bhQuality()" id="bh-q">Quality: Medium</button><button onclick="bhLeave()">Leave</button></div><div class="stk" id="stkBL"><i></i></div><div class="stk" id="stkBR"><i></i></div><button class="bhb" id="bh-fire">🔫</button><button class="bhb" id="bh-jump">⤴</button>`;document.body.appendChild(d);
+ bhHud(true);loadThree().then(()=>{if(BH&&BH.gid===sh.gid)bhInit()}).catch(e=>{if(BH){BH.msg=e.message;bhHud(true)}})}
+function bhStop(){if(!BH)return;const b=BH;BH=null;cancelAnimationFrame(b.raf);clearInterval(b.chk);b.timers.forEach(clearTimeout);if(b.net){try{b.net.hi.off();b.net.ev.off();b.net.st.off();b.net.hi.child(S.uid).remove();if(isH())b.net.base.remove()}catch(e){}}
+ try{document.exitPointerLock()}catch(e){}["keydown","keyup","mousemove","mousedown","mouseup"].forEach(t=>b.fn&&b.fn[t]&&document.removeEventListener(t,b.fn[t]));if(b.onResize)removeEventListener("resize",b.onResize);try{b.r&&b.r.dispose()}catch(e){}const d=$("#bh");if(d)d.remove();render()}
+function bhLeave(){bhStop();leave()}
+function bhQuality(){const q=[.5,.75,1],i=(q.indexOf(BH.q)+1)%3;BH.q=q[i];BH.r&&BH.r.setPixelRatio(BH.q*Math.min(1,window.devicePixelRatio||1));$("#bh-q").textContent="Quality: "+["Low","Medium","High"][i]}
+const bhMat=c=>BH.mats[c]||(BH.mats[c]=new THREE.MeshLambertMaterial({color:c}));
+function bhPropMesh(k){const g=new THREE.Group();BHPARTS[k].forEach(([t,c,x,y,z,sx,sy,sz])=>{const m=new THREE.Mesh(BH.G[t],bhMat(c));m.position.set(x,y,z);m.scale.set(sx,sy,sz);g.add(m)});return g}
+function bhSeekerMesh(col){const g=new THREE.Group(),add=(t,c,x,y,z,sx,sy,sz)=>{const m=new THREE.Mesh(BH.G[t],bhMat(c));m.position.set(x,y,z);m.scale.set(sx,sy,sz);g.add(m)};add("C",col,0,.55,0,.35,1.1,.35);add("S","#ffe0bd",0,1.3,0,.25,.25,.25);add("C","#ffffff",0,1.68,0,.22,.32,.22);add("B","#343a40",.3,.9,-.35,.1,.12,.55);return g}
+function bhInit(){const T=THREE;BH.G={B:new T.BoxGeometry(1,1,1),C:new T.CylinderGeometry(1,1,1,10),S:new T.SphereGeometry(1,8,6),K:new T.CylinderGeometry(1,.7,1,10)};
+ const cv=$("#bh-cv");let r;try{r=new T.WebGLRenderer({canvas:cv,antialias:false,powerPreference:"low-power"})}catch(e){BH.msg="Your browser couldn’t start 3D graphics (WebGL).";bhHud(true);return}
+ BH.r=r;r.setPixelRatio(BH.q*Math.min(1,window.devicePixelRatio||1));r.setSize(innerWidth,innerHeight,false);
+ const sc=BH.scene=new T.Scene();sc.background=new T.Color(0x9ad0f5);sc.fog=new T.Fog(0x9ad0f5,22,62);sc.add(new T.AmbientLight(0xffffff,.8));const dl=new T.DirectionalLight(0xffffff,.55);dl.position.set(8,20,6);sc.add(dl);
+ const cam=BH.cam=new T.PerspectiveCamera(75,innerWidth/innerHeight,.1,80);cam.rotation.order="YXZ";sc.add(cam);
+ const tc=document.createElement("canvas");tc.width=tc.height=64;const g2=tc.getContext("2d");if(g2){g2.fillStyle="#e9dcc3";g2.fillRect(0,0,64,64);g2.fillStyle="#c9b79c";g2.fillRect(0,0,32,32);g2.fillRect(32,32,32,32)}
+ const tex=new T.CanvasTexture(tc);tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.repeat.set(15,15);tex.magFilter=T.NearestFilter;const fl=new T.Mesh(new T.PlaneGeometry(60,60),new T.MeshLambertMaterial({map:tex}));fl.rotation.x=-Math.PI/2;sc.add(fl);
+ BHBOX.forEach(([x,z,w,d,h,c])=>{const m=new T.Mesh(BH.G.B,bhMat(c));m.scale.set(w,h,d);m.position.set(x,h/2,z);sc.add(m)});
+ BH.gun=new T.Mesh(BH.G.B,bhMat("#343a40"));BH.gun.scale.set(.1,.12,.5);BH.gun.position.set(.28,-.27,-.55);cam.add(BH.gun);BH.gun.visible=false;
+ BH.onResize=()=>{if(!BH)return;BH.r.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()};addEventListener("resize",BH.onResize);
+ const cvs=$("#bh-cv"),fn=BH.fn={keydown:e=>{if(!BH)return;const k=e.key.toLowerCase();BH.keys[k]=1;if(k===" "||k.startsWith("arrow"))e.preventDefault();if(e.repeat)return;if("123456".includes(k)&&k)bhPick(+k-1);if(k==="r")BH.rq=true},keyup:e=>{if(BH)BH.keys[e.key.toLowerCase()]=0},
+  mousemove:e=>{if(BH&&document.pointerLockElement===cvs){BH.yaw-=e.movementX*.0025;BH.pitch=Math.max(-1.4,Math.min(1.4,BH.pitch-e.movementY*.0025))}},
+  mousedown:e=>{if(!BH||e.button!==0||e.target.closest("button"))return;if(document.pointerLockElement!==cvs&&matchMedia("(pointer:fine)").matches){try{cvs.requestPointerLock()}catch(x){}return}BH.md=true;bhClick()},mouseup:()=>{if(BH)BH.md=false}};
+ Object.keys(fn).forEach(t=>document.addEventListener(t,fn[t]));
+ mkStick($("#stkBL"),(x,y)=>{const z=Math.hypot(x,y)<.12;BH.jx=z?0:x;BH.jy=z?0:y});mkStick($("#stkBR"),(x,y,on)=>{BH.lx=on?x:0;BH.ly=on?y:0});
+ $("#bh-fire").onpointerdown=()=>{BH.md=true};$("#bh-fire").onpointerup=$("#bh-fire").onpointercancel=()=>{BH.md=false};$("#bh-jump").onpointerdown=()=>{BH.jump=true};
+ BH.msg="Connecting players…";bhNet();BH.t=performance.now();BH.raf=requestAnimationFrame(bhLoop)}
+function bhClick(){const me=BH.P[S.uid];if(me&&me.role===2){const sk=BH.ids.filter(i=>BH.P[i].role===1&&!BH.P[i].gone),k=sk.indexOf(BH.spec);BH.spec=sk[(k+1)%Math.max(1,sk.length)]}}
+/* ---- networking: Firebase Realtime Database relay (same as Mongrel Shot) ---- */
+function bhNet(){const me=S.uid,quiet=()=>{};let rdb;try{rdb=firebase.database()}catch(e){BH.msg="Realtime Database isn’t set up yet (see the setup steps).";bhHud(true);return}
+ const base=rdb.ref(`net/${S.code}/${BH.gid}`);BH.net={base,ev:base.child("ev"),st:base.child("st"),hi:base.child("hi")};
+ const my=BH.net.hi.child(me);try{my.onDisconnect().remove()}catch(e){}my.set(BUILD).catch(quiet);
+ BH.net.hi.on("child_added",x=>{if(BH)BH.hello[x.key]=x.val()||1});
+ BH.net.hi.on("child_removed",x=>{if(!BH)return;delete BH.hello[x.key];if(BH.phase!=="over")bhGone(x.key)});
+ BH.net.ev.on("child_added",x=>{const v=x.val();if(BH&&v&&v.f!==me)try{bhHandle(v.f,v.m)}catch(e){console.error(e)}});
+ const stIn=x=>{const v=x.val();if(BH&&v&&x.key!==me)bhHandle(x.key,v)};BH.net.st.on("child_added",stIn);BH.net.st.on("child_changed",stIn);
+ BH.chk=setInterval(()=>{if(!BH||BH.phase!=="wait")return;const oth=BH.ids.filter(o=>o!==me),bad=oth.filter(o=>BH.hello[o]&&BH.hello[o]!==BUILD);
+  BH.msg="Connecting players…<br><span style='font-size:15px;font-weight:400'>"+oth.map(o=>esc(BH.P[o].name)+": "+(!BH.hello[o]?"waiting for them":bad.includes(o)?"⚠ different version":"ready ✓")).join(" · ")+"</span>"+(bad.length?"<br><span style='font-size:15px;font-weight:400;color:#ffd43b'>Different site versions are open. Everyone press Ctrl+Shift+R, then the host starts again.</span>":"");bhHud(true);
+  if(!isH())return;if(bad.length){if(performance.now()-BH.t0>25000){alert("Some players are on a different version of the site. Everyone needs to hard refresh (Ctrl+Shift+R), then start again.");S.db.doc("rooms/"+S.code).update({phase:"lobby",bh:null}).catch(quiet)}return}
+  if(oth.every(o=>BH.hello[o]))bemit({t:"rs",n:1,seed:Math.floor(Math.random()*1e9),sk:bhSeekers(1)});else if(performance.now()-BH.t0>40000){alert("Not everyone connected. Going back to the lobby.");S.db.doc("rooms/"+S.code).update({phase:"lobby",bh:null}).catch(quiet)}},500)}
+const bsend=m=>{if(!BH||!BH.net)return;try{if(m.t==="s")BH.net.st.child(S.uid).set(m);else BH.net.ev.push({f:S.uid,m})}catch(e){}};
+const bemit=m=>{bsend(m);bhHandle(S.uid,m)};
+function bhSeekers(n){const ids=BH.ids,k=ids.length>4?2:1,o=((n-1)*k)%ids.length;return Array.from({length:k},(_,i)=>ids[(o+i)%ids.length])}
+function bhGone(o){const p=BH&&BH.P[o];if(!p||p.gone)return;p.gone=true;BH.feed.push({t:performance.now(),m:`${esc(p.name)} left`});if(isH())bhCheck()}
+function bhCheck(){if(!BH||BH.phase!=="seek"||!isH())return;const al=BH.ids.map(i=>BH.P[i]).filter(p=>!p.gone);if(!al.some(p=>p.role===0))bhEnd("seekers");else if(!al.some(p=>p.role===1))bhEnd("hiders")}
+function bhEnd(w){if(!BH||BH.phase!=="seek"||!isH())return;const pts={};BH.ids.forEach(id=>{const p=BH.P[id];let n=BH.hits[id]||0;if(w==="hiders"&&p.role===0&&!p.gone)n+=3;if(w==="seekers"&&p.role===1&&!p.gone)n+=2;if(n)pts[id]=n});
+ const sc={...BH.scores};Object.keys(pts).forEach(id=>sc[id]=(sc[id]||0)+pts[id]);const b=S.db.batch();Object.keys(pts).forEach(id=>b.update(S.db.doc(`rooms/${S.code}/players/${id}`),{score:firebase.firestore.FieldValue.increment(pts[id])}));b.commit().catch(()=>{});
+ bemit({t:"re",w,pts,sc});
+ if(BH.round>=BH.rounds)BH.tm(()=>{bemit({t:"mo",sc});BH.tm(()=>S.db.doc("rooms/"+S.code).update({phase:"lobby",bh:null}).catch(()=>{}),7000)},6500);
+ else BH.tm(()=>bemit({t:"rs",n:BH.round+1,seed:Math.floor(Math.random()*1e9),sk:bhSeekers(BH.round+1)}),6500)}
+function bhHandle(f,m){if(!BH)return;const P=BH.P,now=performance.now();
+ switch(m.t){
+ case"s":{const p=P[f];if(p&&p.role!==undefined){p.prop=m.p;(p.buf=p.buf||[]).push({t:now,x:m.x,y:m.y,z:m.z,r:m.r});if(p.buf.length>12)p.buf.shift()}break}
+ case"pr":if(P[f])P[f].prop=m.i;break;
+ case"sh":bhTracer(m);beep(240,.07,"square",.04);break;
+ case"h":{const p=P[m.to],by=P[m.by];if(!p||p.role!==0||BH.phase!=="seek")break;BH.hits[m.by]=(BH.hits[m.by]||0)+1;beep(160,.25,"sawtooth",.07);
+  if(BH.hm==="seeker"){p.role=1;p.ammo=8;p.rt=0;p.cd=0}else{p.role=2;if(m.to===S.uid)BH.spec=m.by}
+  BH.feed.push({t:now,m:`${esc(by?by.name:"?")} found ${esc(p.name)}!`});if(m.to===S.uid){BH.hint=BH.hm==="seeker"?"You were found! Now you hunt!":"You were found! Spectating…";BH.hintT=now}
+  if(isH())bhCheck();break}
+ case"rs":bhRound(m);if(isH())BH.tm(()=>bemit({t:"ph",p:"seek"}),HIDE*1000);break;
+ case"ph":BH.phase="seek";BH.pt0=now;BH.hint="Seekers are loose!";BH.hintT=now;beep(660,.2,"square",.06);if(isH())BH.tm(()=>bhEnd("hiders"),SEEK*1000);break;
+ case"re":BH.phase="end";BH.scores=m.sc;BH.result={w:m.w,pts:m.pts};chord(m.w==="hiders"?[392,523]:[523,392]);break;
+ case"mo":BH.phase="over";BH.scores=m.sc;chord([523,659,784,1047]);break}
+ bhHud(true)}
+function bhRound(m){const now=performance.now(),rnd=bhRng(m.seed);BH.round=m.n;BH.phase="hide";BH.pt0=now;BH.hits={};BH.result=null;BH.fx.forEach(f=>{BH.scene&&BH.scene.remove(f.o)});BH.fx=[];
+ BH.ids.forEach((id,i)=>{const p=BH.P[id],sp=BHSPAWN[i%8];p.role=m.sk.includes(id)?1:0;p.x=sp[0];p.z=sp[1];p.y=0;p.vy=0;p.r=Math.atan2(sp[0],sp[1]);p.prop=Math.floor(rnd()*6);p.ammo=8;p.rt=0;p.cd=0;p.buf=[]});
+ const me=BH.P[S.uid];BH.yaw=me.r;BH.pitch=0;BH.hint=me.role===1?"You are a SEEKER!":"You are a HIDER — pick a prop (1–6) and hide!";BH.hintT=now;BH.spec=null;
+ if(BH.scene)bhScatter(m.seed)}
+function bhScatter(seed){if(BH.scat){BH.scene.remove(BH.scat);BH.scat.traverse(o=>{if(o.isInstancedMesh)o.dispose()})}
+ const rnd=bhRng(seed),g=new THREE.Group(),pos=[],items=[],dm=new THREE.Object3D(),pm=new THREE.Matrix4(),im=new THREE.Matrix4(),one=new THREE.Quaternion();
+ const free=(x,z)=>!BHBOX.some(([bx,bz,w,d])=>Math.abs(x-bx)<w/2+.9&&Math.abs(z-bz)<d/2+.9)&&BHSPAWN.every(([sx,sz])=>Math.hypot(x-sx,z-sz)>3.5)&&pos.every(([px,pz])=>Math.hypot(x-px,z-pz)>1.1);
+ for(let k=0;k<6;k++)for(let n=0;n<16;n++){let x,z,t=0;do{x=(rnd()-.5)*57;z=(rnd()-.5)*57;t++}while(!free(x,z)&&t<80);if(t<80){pos.push([x,z]);items.push({k,x,z,r:rnd()*6.28,s:.9+rnd()*.25})}}
+ for(let k=0;k<6;k++){const mine=items.filter(i=>i.k===k);BHPARTS[k].forEach(([t,c,x,y,z,sx,sy,sz])=>{const mesh=new THREE.InstancedMesh(BH.G[t],bhMat(c),Math.max(1,mine.length));pm.compose(new THREE.Vector3(x,y,z),one,new THREE.Vector3(sx,sy,sz));mine.forEach((it,i)=>{dm.position.set(it.x,0,it.z);dm.rotation.set(0,it.r,0);dm.scale.set(it.s,it.s,it.s);dm.updateMatrix();im.multiplyMatrices(dm.matrix,pm);mesh.setMatrixAt(i,im)});mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;g.add(mesh)})}
+ BH.scat=g;BH.scene.add(g);BH.nProps=items.length}
+function bhTracer(m){if(!BH.scene)return;const geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(m.x,m.y,m.z),new THREE.Vector3(m.ex,m.ey,m.ez)]),o=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffe066}));BH.scene.add(o);BH.fx.push({o,t:performance.now()+140})}
+function bhPick(i){const me=BH&&BH.P[S.uid];if(!me||me.role!==0||!(BH.phase==="hide"||BH.phase==="seek"))return;if(BH.phase==="seek"&&BH.pcd>0){BH.hint="Prop change cooling down…";BH.hintT=performance.now();return}me.prop=i;BH.pcd=BH.phase==="seek"?2:0;bemit({t:"pr",i});beep(520,.06,"triangle",.05)}
+function bhPush(o,r){BHBOX.forEach(([x,z,w,d])=>{const cx=Math.max(x-w/2,Math.min(o.x,x+w/2)),cz=Math.max(z-d/2,Math.min(o.z,z+d/2)),dx=o.x-cx,dz=o.z-cz,m=Math.hypot(dx,dz);if(m<r){if(m>0){o.x+=dx/m*(r-m);o.z+=dz/m*(r-m)}else o.x+=r}});o.x=Math.max(-29.5+r,Math.min(29.5-r,o.x));o.z=Math.max(-29.5+r,Math.min(29.5-r,o.z))}
+function bhRayBox(o,d,b){let t0=0,t1=1e9;const mn=[b[0]-b[2]/2,0,b[1]-b[3]/2],mx=[b[0]+b[2]/2,b[4],b[1]+b[3]/2];for(let i=0;i<3;i++){if(Math.abs(d[i])<1e-8){if(o[i]<mn[i]||o[i]>mx[i])return 1e9}else{let a=(mn[i]-o[i])/d[i],c=(mx[i]-o[i])/d[i];if(a>c){const q=a;a=c;c=q}t0=Math.max(t0,a);t1=Math.min(t1,c);if(t0>t1)return 1e9}}return t0}
+function bhRaySph(o,d,c,r){const ox=o[0]-c[0],oy=o[1]-c[1],oz=o[2]-c[2],b=ox*d[0]+oy*d[1]+oz*d[2],cc=ox*ox+oy*oy+oz*oz-r*r,ds=b*b-cc;if(ds<0)return 1e9;const t=-b-Math.sqrt(ds);return t>0?t:1e9}
+function bhFire(){const me=BH.P[S.uid];if(me.cd>0||me.rt>0||me.ammo<=0)return;me.ammo--;me.cd=.38;
+ const cp=Math.cos(BH.pitch),d=[-Math.sin(BH.yaw)*cp,Math.sin(BH.pitch),-Math.cos(BH.yaw)*cp],o=[me.x,me.y+1.55,me.z];let wall=60;BHBOX.forEach(b=>{const t=bhRayBox(o,d,b);if(t<wall)wall=t});
+ let best=null,bt=wall;BH.ids.forEach(id=>{const p=BH.P[id];if(id===S.uid||p.role!==0||p.gone)return;const t=bhRaySph(o,d,[p.x,p.y+.6,p.z],.85);if(t<bt){bt=t;best=id}});
+ bemit({t:"sh",x:o[0],y:o[1]-.15,z:o[2],ex:o[0]+d[0]*bt,ey:o[1]+d[1]*bt,ez:o[2]+d[2]*bt});if(best)bemit({t:"h",to:best,by:S.uid})}
+function bhLoop(t){if(!BH)return;const dt=Math.min(.05,Math.max(0,(t-BH.t)/1000));BH.t=t;try{bhStep(t,dt);bhDraw(t)}catch(e){console.error(e)}if(BH)BH.raf=requestAnimationFrame(bhLoop)}
+function bhStep(t,dt){const me=BH.P[S.uid];if(!me||!BH.scene)return;const ph=BH.phase,play=ph==="hide"||ph==="seek",K=BH.keys;
+ if(BH.pcd>0)BH.pcd-=dt;if(BH.lx||BH.ly){BH.yaw-=BH.lx*2.6*dt;BH.pitch=Math.max(-1.4,Math.min(1.4,BH.pitch-BH.ly*1.8*dt))}
+ if(play&&me.role!==2&&!(ph==="hide"&&me.role===1)){const kx=(K.d||K.arrowright?1:0)-(K.a||K.arrowleft?1:0)+BH.jx,kz=(K.w||K.arrowup?1:0)-(K.s||K.arrowdown?1:0)-BH.jy,m=Math.hypot(kx,kz),sp=me.role===1?5.8:4.6;
+  if(m>.05){const n=Math.min(1,m),mx=(Math.cos(BH.yaw)*kx-Math.sin(BH.yaw)*kz)/m,mz=(-Math.sin(BH.yaw)*kx-Math.cos(BH.yaw)*kz)/m;me.x+=mx*sp*n*dt;me.z+=mz*sp*n*dt;if(me.role===0){let a=Math.atan2(-mx,-mz)-me.r;while(a>Math.PI)a-=6.283;while(a<-Math.PI)a+=6.283;me.r+=a*Math.min(1,dt*10)}}
+  if((K[" "]||BH.jump)&&me.y<=.001)me.vy=6.5;BH.jump=false;me.vy-=18*dt;me.y=Math.max(0,me.y+me.vy*dt);if(me.y===0)me.vy=0;bhPush(me,.45);
+  if(me.role===1){me.r=BH.yaw;me.cd-=dt;if(BH.rq){BH.rq=false;if(me.ammo<8&&me.rt<=0)me.rt=1.6}if(me.ammo<=0&&me.rt<=0)me.rt=1.6;if(me.rt>0){me.rt-=dt;if(me.rt<=0){me.ammo=8;me.rt=0}}if(BH.md&&ph==="seek")bhFire()}
+  if(t-BH.ls>66){BH.ls=t;bsend({t:"s",x:+me.x.toFixed(2),y:+me.y.toFixed(2),z:+me.z.toFixed(2),r:+me.r.toFixed(2),p:me.prop})}}
+ BH.ids.forEach(id=>{if(id===S.uid)return;const p=BH.P[id],bf=p.buf;if(!bf||!bf.length)return;const rt=t-100,n=bf.length;let i=n-1;while(i>1&&bf[i-1].t>rt)i--;const a=bf[Math.max(0,i-1)],b=bf[i],sp=b.t-a.t||1,f=n===1?1:Math.max(0,Math.min(1,(rt-a.t)/sp));let dr=b.r-a.r;while(dr>Math.PI)dr-=6.283;while(dr<-Math.PI)dr+=6.283;p.x=a.x+(b.x-a.x)*f;p.y=a.y+(b.y-a.y)*f;p.z=a.z+(b.z-a.z)*f;p.r=a.r+dr*f});
+ if(t-BH.lo>200){BH.lo=t;bhHud()}}
+function bhDraw(t){const me=BH.P[S.uid];if(!me||!BH.scene)return;
+ BH.ids.forEach(id=>{const p=BH.P[id],key=p.gone||p.role===2?"x":p.role===1?"s"+p.color:"p"+p.prop;if(p.mk!==key){if(p.mesh)BH.scene.remove(p.mesh);p.mesh=key==="x"?null:key[0]==="s"?bhSeekerMesh(p.color):bhPropMesh(p.prop);if(p.mesh)BH.scene.add(p.mesh);p.mk=key}if(p.mesh){p.mesh.position.set(p.x,p.y,p.z);p.mesh.rotation.y=p.r;p.mesh.visible=!(id===S.uid&&p.role===1)}});
+ let tg=me;if(me.role===2){tg=BH.P[BH.spec];if(!tg||tg.role!==1||tg.gone)tg=BH.ids.map(i=>BH.P[i]).find(p=>p.role===1&&!p.gone)||me}
+ const c=BH.cam;if(tg.role===1){const own=tg===me;c.position.set(tg.x,tg.y+1.55,tg.z);c.rotation.set(own?BH.pitch:0,own?BH.yaw:tg.r,0);BH.gun.visible=own&&BH.phase!=="end"}
+ else{const cp=Math.cos(BH.pitch),d=[-Math.sin(BH.yaw)*cp,Math.sin(BH.pitch),-Math.cos(BH.yaw)*cp];c.position.set(tg.x-d[0]*4,Math.max(.4,tg.y+.9-d[1]*4),tg.z-d[2]*4);c.rotation.set(BH.pitch,BH.yaw,0);BH.gun.visible=false}
+ BH.fx=BH.fx.filter(f=>{if(t>f.t){BH.scene.remove(f.o);f.o.geometry.dispose();f.o.material.dispose();return false}return true});
+ BH.r.render(BH.scene,c)}
+const bhSet=(id,h)=>{const e=document.getElementById(id);if(e&&e.dataset.h!==h){e.dataset.h=h;e.innerHTML=h}};
+function bhHud(force){if(!BH)return;const me=BH.P[S.uid],now=performance.now();if(!me||BH.phase==="wait"){bhSet("bh-ov",`<b style="font-size:22px">${BH.msg}</b>`);const o=$("#bh-ov");if(o)o.style.background="#000";bhSet("bh-top","");bhSet("bh-props","");bhSet("bh-ammo","");return}
+ const ph=BH.phase,left=ph==="hide"?HIDE-(now-BH.pt0)/1000:ph==="seek"?SEEK-(now-BH.pt0)/1000:0,al=BH.ids.map(i=>BH.P[i]).filter(p=>!p.gone),hid=al.filter(p=>p.role===0).length,sk=al.filter(p=>p.role===1).length;
+ bhSet("bh-top",`<span>🍔 Round ${BH.round}/${BH.rounds}</span>${ph==="hide"||ph==="seek"?`<span>${ph==="hide"?"Hiding":"Hunt"} ⏱ ${Math.max(0,Math.ceil(left))}s</span>`:""}<span>Hiders ${hid} · Seekers ${sk}</span>`);
+ bhSet("bh-props",me.role===0&&(ph==="hide"||ph==="seek")?BHP.map((p,i)=>`<button class="bhp ${me.prop===i?"sel":""}" onclick="bhPick(${i})" title="${p.n}">${p.i}<small>${i+1}</small></button>`).join(""):"");
+ const sp=BH.P[BH.spec];bhSet("bh-ammo",me.role===1&&ph==="seek"?`🔫 ${me.ammo}/8${me.rt>0?" · reloading…":""}`:me.role===2&&ph==="seek"?`👁 Spectating ${sp?esc(sp.name):"a seeker"} — click to switch`:"");
+ bhSet("bh-cross",me.role===1&&ph==="seek"?" ":"");const cr=$("#bh-cross");if(cr)cr.style.display=me.role===1&&ph==="seek"?"block":"none";
+ bhSet("bh-msg",BH.hint&&now-BH.hintT<3500?BH.hint:"");BH.feed=BH.feed.filter(f=>now-f.t<6000).slice(-4);bhSet("bh-feed",BH.feed.map(f=>`<div>${f.m}</div>`).join(""));
+ let ov="",bg="transparent";
+ if(ph==="hide"&&me.role===1){bg="#000";ov=`<b style="font-size:30px">🔫 You are a SEEKER</b><div style="font-size:18px">The hiders are hiding… you’re released in ${Math.max(0,Math.ceil(left))}s</div><div style="font-size:14px;opacity:.8">Move: WASD · Look: mouse · Shoot: click · Reload: R</div>`}
+ else if(ph==="end"&&BH.result){bg="rgba(0,0,0,.65)";const w=BH.result.w;ov=`<b style="font-size:30px">${w==="hiders"?"🍔 The hiders survived!":"🔫 The seekers found everyone!"}</b><table><tr><th>Player</th><th>Round</th><th>Total</th></tr>${BH.ids.map(i=>`<tr><td>${esc(BH.P[i].name)}</td><td>+${BH.result.pts[i]||0}</td><td>${BH.scores[i]||0}</td></tr>`).join("")}</table><div style="opacity:.8">${BH.round>=BH.rounds?"That was the last round…":"Next round starting…"}</div>`}
+ else if(ph==="over"){bg="rgba(0,0,0,.75)";const top=[...BH.ids].sort((a,b)=>(BH.scores[b]||0)-(BH.scores[a]||0));ov=`<b style="font-size:32px">🏆 ${esc(BH.P[top[0]].name)} wins the hunt!</b><table>${top.map((i,k)=>`<tr><td>${k+1}.</td><td>${esc(BH.P[i].name)}</td><td>${BH.scores[i]||0}</td></tr>`).join("")}</table>`}
+ const o=$("#bh-ov");if(o)o.style.background=bg;bhSet("bh-ov",ov)}
 function home(){return `<h1>Mongrel Games</h1><p class="sub">${GN[S.game]||GN.imp} · <a class="lnk" onclick="S.page='games';render()">all games</a></p>
 <div class="card"><h2>Your nickname</h2><input id="nick" maxlength="16" placeholder="e.g. Sneaky Sam" value="${esc(S.name)}" oninput="S.name=this.value;ls.set('nick',this.value)"></div>
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
@@ -613,7 +776,7 @@ function manage(){const cs=cats();
 ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
 ${cs.map((c,i)=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>${esc(c.name)}</b> <span class="mute">(${c.words.length})</span></span><button class="ghost sm" style="margin:0" onclick="delCat(${i})">🗑 Delete category</button></div><div>${c.words.map((w,j)=>`<span class="pill">${esc(w)}${c.hints[w.toLowerCase()]?` <i style="font-weight:400">— ${esc(c.hints[w.toLowerCase()])}</i>`:""} <a style="cursor:pointer;margin-left:4px" title="${c.hints[w.toLowerCase()]?"Edit":"Add"} hint" onclick="editHint(${i},${j})">💡</a><a style="cursor:pointer;margin-left:4px" title="Delete word" onclick="delWord(${i},${j})">✕</a></span>`).join("")}</div></div>`).join("")}`}
 
-function game(){const g=S.room.game;return g==="wave"?waveGame():g==="hang"?hangGame():g==="scat"?scatGame():g==="shot"?shotGame():impGame()}
+function game(){const g=S.room.game;return g==="wave"?waveGame():g==="hang"?hangGame():g==="scat"?scatGame():g==="shot"?shotGame():g==="bh"?bhGame():impGame()}
 function impGame(){const r=S.room,h=isHost(),me=r.impostor===S.uid;let b="";
  const head=`<div class="card"><div class="mute" style="text-align:center">Room code — share it with friends</div><div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap"><div class="code">${esc(S.code)}</div><button class="ghost sm" style="margin:0" onclick="copyLink(this)">🔗 Copy invite link</button></div><div>${S.players.map(p=>`<span class="pill">${p.id===r.host?"👑 ":""}${esc(p.name)}${p.id===S.uid?" (you)":""}${kickLnk(p.id)}</span>`).join("")}</div></div>`;
  if(r.phase==="lobby"){const cs=cats();if(!S.sel)S.sel=new Set(cs.map(c=>c.name));
@@ -639,14 +802,14 @@ function createRoom(){if(!needName())return;guard(async()=>{const code=Array.fro
 function joinRoom(c){if(!needName())return;c=(c||"").trim().toUpperCase();guard(async()=>{const s=await S.db.doc("rooms/"+c).get();if(!s.exists){S.err="No room with that code.";return}if((s.data().kicked||[]).includes(S.uid)){S.err="You were removed from that room.";return}S.game=s.data().game||"imp";await enter(c)})}
 async function enter(code){await S.db.doc(`rooms/${code}/players/${S.uid}`).set({name:S.name,joined:Date.now()});ls.set("room",code);sub(code)}
 function sub(code){unsub();S.code=code;S.adv=null;S.claim=null;S.rseen={};S.rinit=false;S.page="home";
- S.unsubs.push(S.db.doc("rooms/"+code).onSnapshot(s=>{S.room=s.exists?s.data():null;kickCheck();shotSync();if(S.room){const ph=S.room.phase;if(ph!==S.lastPhase){if(ph==="reveal"){const p=(S.room.pts||{})[S.uid]||0;p?chord(p>=3?[523,659,784,1047]:[523,659]):beep(190,.3,"sawtooth",.05)}if(ph==="result")chord([392,523,659])}S.lastPhase=ph}if(S.room&&S.room.phase==="play")S.show=S.show&&S.lastRound===S.room.round;S.lastRound=S.room&&S.room.round;render()},e=>{S.err="Connection problem.";render()}));
+ S.unsubs.push(S.db.doc("rooms/"+code).onSnapshot(s=>{S.room=s.exists?s.data():null;kickCheck();shotSync();bhSync();if(S.room){const ph=S.room.phase;if(ph!==S.lastPhase){if(ph==="reveal"){const p=(S.room.pts||{})[S.uid]||0;p?chord(p>=3?[523,659,784,1047]:[523,659]):beep(190,.3,"sawtooth",.05)}if(ph==="result")chord([392,523,659])}S.lastPhase=ph}if(S.room&&S.room.phase==="play")S.show=S.show&&S.lastRound===S.room.round;S.lastRound=S.room&&S.room.round;render()},e=>{S.err="Connection problem.";render()}));
  S.unsubs.push(S.db.collection(`rooms/${code}/players`).onSnapshot(q=>{S.players=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.joined-b.joined);checkReacts();render()}))}
 function unsub(){S.unsubs.forEach(f=>f());S.unsubs=[]}
 function startRound(){guard(async()=>{if(!S.sel)S.sel=new Set(cats().map(c=>c.name));const cs=cats().filter(c=>S.sel&&S.sel.has(c.name)&&c.words.length);if(!cs.length){S.err="Select a category with words.";return}
  const c=pick(cs),w=pick(c.words),ps=S.players;await S.db.doc("rooms/"+S.code).update({phase:"play",guess:null,guessOk:null,round:(S.room.round||0)+1,r0:S.room.phase==="lobby"?(S.room.round||0):(S.room.r0||0),category:c.name,word:w,hint:c.hints[w.toLowerCase()]||null,hintLetter:letterOf(w),impostor:pick(ps).id,hr:1,order:shuffle(ps.map(p=>p.id)),dl:Date.now()+30000});S.show=false})}
 function setPhase(p){guard(()=>S.db.doc("rooms/"+S.code).update({phase:p}))}
 function castVote(t){guard(()=>S.db.doc(`rooms/${S.code}/players/${S.uid}`).update({vote:{round:S.room.round,target:t}}))}
-function leave(){guard(async()=>{shotStop();const c=S.code;unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");await S.db.doc(`rooms/${c}/players/${S.uid}`).delete()})}
+function leave(){guard(async()=>{shotStop();bhStop();const c=S.code;unsub();S.code=null;S.room=null;S.players=[];ls.set("room","");await S.db.doc(`rooms/${c}/players/${S.uid}`).delete()})}
 function saveCat(name,words){name=(name||"").trim();const items=(words||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean).map(x=>{const i=x.indexOf("=");return i>0?{w:x.slice(0,i).trim(),h:x.slice(i+1).trim()}:{w:x,h:""}}).filter(x=>x.w),ws=items.map(x=>x.w);
  if(!name||!ws.length){S.err="Enter a name and at least one word.";render();return}
  guard(async()=>{const ref=S.db.collection("custom").doc(hash(name)),s=await ref.get(),od=s.exists?s.data():{},all=[...(od.words||[])],hints=[...(od.hints||[])];
